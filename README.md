@@ -6,7 +6,7 @@ Imgur blocked requests from Ptt web. For fixing this issue, this extension remov
 
 ### Chromium
 
-You can install the latest version from the [Chrome Web Store](https://chrome.google.com/webstore/detail/ptt-imgur-fix/khanhghjfcpmgkomfomadomnckjakglm).
+You can install the latest version from the [Chrome Web Store](https://chromewebstore.google.com/detail/ptt-media-preview/khanhghjfcpmgkomfomadomnckjakglm).
 
 ## Firefox
 

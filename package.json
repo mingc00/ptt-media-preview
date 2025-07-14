@@ -11,14 +11,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mingc00/ptt-imgur-fix.git"
+    "url": "git+https://github.com/mingc00/ptt-media-preview.git"
   },
   "author": "Mingc",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mingc00/ptt-imgur-fix/issues"
+    "url": "https://github.com/mingc00/ptt-media-preview/issues"
   },
-  "homepage": "https://github.com/mingc00/ptt-imgur-fix#readme",
+  "homepage": "https://github.com/mingc00/ptt-media-preview#readme",
   "devDependencies": {
     "@eslint/js": "^9.23.0",
     "dprint": "^0.49.1",

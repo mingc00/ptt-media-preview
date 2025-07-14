@@ -1,9 +1,9 @@
 #!name=PTT Media Preview
-#!desc=增強 Ptt 連結預覽體驗 v20250402
+#!desc=增強 Ptt 連結預覽體驗 v20250714
 #!category=Tweaks
 
 [Script]
-ptt_media_preview.js = type=http-response,pattern=^https:\/\/www\.ptt\.cc\/bbs\/[\w./-]+\.html,requires-body=true,script-path=https://cdn.jsdelivr.net/gh/mingc00/ptt-imgur-fix@main/surge/ptt_media_preview.js
+ptt_media_preview.js = type=http-response,pattern=^https:\/\/www\.ptt\.cc\/bbs\/[\w./-]+\.html,requires-body=true,script-path=https://cdn.jsdelivr.net/gh/mingc00/ptt-media-preview@main/surge/ptt_media_preview.js
 
 [MITM]
 hostname = %APPEND% ptt.cc, www.ptt.cc
