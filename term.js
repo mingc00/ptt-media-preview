@@ -17,13 +17,13 @@ function getConfig() {
   return config;
 }
 
-let { isEasyReadingEnabled, isPicPreviewEnabled } = getConfig();
+let { isEasyReadingEnabled } = getConfig();
 
 new MutationObserver((records) => {
   for (const record of records) {
     for (const node of record.removedNodes) {
       if (node.role === 'dialog') {
-        ({ isEasyReadingEnabled, isPicPreviewEnabled } = getConfig());
+        ({ isEasyReadingEnabled } = getConfig());
         return;
       }
     }
@@ -94,7 +94,7 @@ new MutationObserver((records) => {
   }
 
   function onUpdate() {
-    if (!isEasyReadingEnabled && !isPicPreviewEnabled) {
+    if (!isEasyReadingEnabled) {
       return;
     }
 
