@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 5.5.2 (2025-07-14)
+
+- Fix config checking
+
 ## 5.5.1 (2025-07-12)
 
 - Fix ptt web match pattern

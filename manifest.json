@@ -1,7 +1,7 @@
 {
   "name": "Ptt Media Preview",
   "description": "增強 Ptt 連結預覽體驗",
-  "version": "5.5.1",
+  "version": "5.5.2",
   "icons": {
     "48": "icon/48.png",
     "128": "icon/128.png",

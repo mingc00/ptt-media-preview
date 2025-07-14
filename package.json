@@ -1,6 +1,6 @@
 {
   "name": "ptt-media-preview",
-  "version": "5.5.1",
+  "version": "5.5.2",
   "description": "Enhanced Ptt link preview experience",
   "scripts": {
     "build:chrome": "./pack.py",
