@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 5.5.3 (2025-12-06)
+
+- Disable image preview in mailbox
+
 ## 5.5.2 (2025-07-14)
 
 - Fix config checking
