@@ -1,6 +1,7 @@
 const links = [
   ...document.querySelectorAll('a[href*="//imgur.com"]'),
   ...document.querySelectorAll('a[href*="//i.imgur.com/"]'),
+  ...document.querySelectorAll('a[href*=".webp"]'),
 ];
 
 function createDiv(...classes) {
@@ -39,7 +40,7 @@ for (const a of links) {
   let match = null;
   if ((match = pathname.match(/^\/(?:a|gallery)\/(\w+)/))) {
     albums.push([a, match[1]]);
-  } else if (/(png|jpeg|jpg|gif)$/i.test(pathname)) {
+  } else if (/(png|jpeg|jpg|gif|webp)$/i.test(pathname)) {
     fixBrokenPreview(a);
   } else if ((match = pathname.match(/^\/(\w+)$/))) {
     unknownHashes.push([a, match[1]]);

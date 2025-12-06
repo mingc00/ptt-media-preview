@@ -110,7 +110,7 @@ new MutationObserver((records) => {
     const imgurAlbumRe = /https?:\/\/(?:[mi]\.)?imgur.com\/(?:a|gallery)\/(\w+)/;
     const targets = as.filter(
       (a) =>
-        (/(png|jpeg|jpg|gif)$/i.test(a.href) && !imgurAlbumRe.test(a.href))
+        (/(png|jpeg|jpg|gif|webp)$/i.test(a.href) && !imgurAlbumRe.test(a.href))
         || a.href.startsWith('https://pbs.twimg.com/media/'),
     ).filter((a) => {
       const container = getPreviewContainer(a);
