@@ -37,6 +37,10 @@ new MutationObserver((records) => {
     return;
   }
 
+  function isMail() {
+    return mainContainer.lastChild?.querySelector('.q0.b7')?.textContent === '回信 ';
+  }
+
   const config = {
     childList: true,
     subtree: true,
@@ -98,7 +102,7 @@ new MutationObserver((records) => {
       return;
     }
 
-    if (!mainContainer.querySelector('.q4.b7')) {
+    if (!mainContainer.querySelector('.q4.b7') || isMail()) {
       return;
     }
 
