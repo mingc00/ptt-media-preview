@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 5.5.4 (2025-12-06)
+
+- Support webp link
+
 ## 5.5.3 (2025-12-06)
 
 - Disable image preview in mailbox
