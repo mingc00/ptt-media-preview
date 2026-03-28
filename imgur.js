@@ -28,7 +28,9 @@ function createVideoEl(src) {
 
 function createImageEl(src) {
   const imgEl = document.createElement('img');
-  imgEl.referrerPolicy = 'no-referrer';
+  if (!src.startsWith('https://i.verb.tw/')) {
+    imgEl.referrerPolicy = 'no-referrer';
+  }
   imgEl.src = src;
   return imgEl;
 }
