@@ -187,7 +187,8 @@ new MutationObserver((records) => {
 
     meeeAnchors.forEach((a) => {
       const url = new URL(a.href);
-      url.pathname += '.png';
+      url.host = `i.${url.host}`;
+      url.pathname += '.jpg';
       const div = getPreviewContainer(a);
       div.appendChild(createImage(url.toString()));
     });

@@ -72,7 +72,8 @@ for (const a of document.querySelectorAll('a[href^="https://meee.com.tw/"]')) {
   if (!url.pathname.match(/^\/\w+$/)) {
     continue;
   }
-  url.pathname += '.png';
+  url.host = `i.${url.host}`;
+  url.pathname += '.jpg';
   insertPreview(a, createLazyImageEl(url.toString()));
 }
 
