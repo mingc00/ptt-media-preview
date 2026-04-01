@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 5.5.6 (2026-04-01)
+
+- Update heuristic for meee.com.tw
+
 ## 5.5.5 (2026-03-28)
 
 - Fix verb.tw preview in term
