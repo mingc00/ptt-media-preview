@@ -1,8 +1,8 @@
-const links = [
-  ...document.querySelectorAll('a[href*="//imgur.com"]'),
-  ...document.querySelectorAll('a[href*="//i.imgur.com/"]'),
-  ...document.querySelectorAll('a[href*=".webp"]'),
-];
+const links = document.querySelectorAll([
+  'a[href*="//imgur.com"]',
+  'a[href*="//i.imgur.com/"]',
+  'a[href*=".webp"]',
+].join(','));
 
 function createDiv(...classes) {
   const div = document.createElement('div');

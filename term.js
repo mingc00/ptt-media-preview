@@ -41,7 +41,7 @@ new MutationObserver((records) => {
     return mainContainer.lastChild?.querySelector('.q0.b7')?.textContent === '回信 ';
   }
 
-  const config = {
+  const observerOptions = {
     childList: true,
     subtree: true,
   };
@@ -94,7 +94,8 @@ new MutationObserver((records) => {
   }
 
   function getPreviewContainer(a) {
-    return a.parentNode.nextSibling;
+    const container = a.parentElement?.nextElementSibling;
+    return container instanceof HTMLElement ? container : null;
   }
 
   function onUpdate() {
@@ -159,76 +160,86 @@ new MutationObserver((records) => {
     }
 
     observer.disconnect();
-    targets.forEach((a) => {
-      const div = getPreviewContainer(a);
-      div.appendChild(createImage(a.href));
-    });
+    try {
+      targets.forEach((a) => {
+        const div = getPreviewContainer(a);
+        if (div) {
+          div.appendChild(createImage(a.href));
+        }
+      });
 
-    albumAnchors.forEach(async ([a, hash]) => {
-      const div = getPreviewContainer(a);
-      while (div.firstChild) {
-        div.removeChild(div.lastChild);
-      }
-      const links = await resolveAlbum(hash);
-      for (const link of links) {
-        div.appendChild(
-          link.endsWith('.gif') ? createImgurGif(link) : createImage(link),
-        );
-      }
-    });
+      albumAnchors.forEach(async ([a, hash]) => {
+        const div = getPreviewContainer(a);
+        if (!div) {
+          return;
+        }
+        while (div.firstChild) {
+          div.removeChild(div.lastChild);
+        }
+        const links = await resolveAlbum(hash);
+        for (const link of links) {
+          div.appendChild(
+            link.endsWith('.gif') ? createImgurGif(link) : createImage(link),
+          );
+        }
+      });
 
-    videoImgs.forEach((img) => {
-      const videoEl = document.createElement('video');
-      videoEl.src = img.src;
-      videoEl.classList.add('easyReadingImg', 'hyperLinkPreview');
-      videoEl.controls = true;
-      img.parentNode.replaceChild(videoEl, img);
-    });
+      videoImgs.forEach((img) => {
+        const videoEl = document.createElement('video');
+        videoEl.src = img.src;
+        videoEl.classList.add('easyReadingImg', 'hyperLinkPreview');
+        videoEl.controls = true;
+        img.parentNode?.replaceChild(videoEl, img);
+      });
 
-    meeeAnchors.forEach((a) => {
-      const url = new URL(a.href);
-      url.host = `i.${url.host}`;
-      url.pathname += '.jpg';
-      const div = getPreviewContainer(a);
-      div.appendChild(createImage(url.toString()));
-    });
+      meeeAnchors.forEach((a) => {
+        const div = getPreviewContainer(a);
+        if (!div) {
+          return;
+        }
+        const url = new URL(a.href);
+        url.host = `i.${url.host}`;
+        url.pathname += '.jpg';
+        div.appendChild(createImage(url.toString()));
+      });
 
-    ytAnchors.forEach(([a, id]) => {
-      const div = getPreviewContainer(a);
-      if (!div || div.childNodes.length !== 0) {
-        return;
-      }
-      const url = new URL(a.href);
-      let src = `https://www.youtube.com/embed/${id}`;
-      if (url.searchParams.has('t')) {
-        src += `?start=${url.searchParams.get('t')}`;
-      }
-      const container = document.createElement('div');
-      container.style.margin = '0.5em auto';
-      container.style.maxWidth = '800px';
-      container.style.height = '450px';
-      const iframe = document.createElement('iframe');
-      iframe.type = 'text/html';
-      iframe.src = src;
-      iframe.style.border = 'none';
-      iframe.style.width = '100%';
-      iframe.style.height = '100%';
-      iframe.allowFullscreen = true;
-      iframe.referrerPolicy = 'origin-when-cross-origin';
-      container.appendChild(iframe);
-      div.appendChild(container);
-    });
+      ytAnchors.forEach(([a, id]) => {
+        const div = getPreviewContainer(a);
+        if (!div || div.childNodes.length !== 0) {
+          return;
+        }
+        const url = new URL(a.href);
+        let src = `https://www.youtube.com/embed/${id}`;
+        if (url.searchParams.has('t')) {
+          src += `?start=${url.searchParams.get('t')}`;
+        }
+        const container = document.createElement('div');
+        container.style.margin = '0.5em auto';
+        container.style.maxWidth = '800px';
+        container.style.height = '450px';
+        const iframe = document.createElement('iframe');
+        iframe.type = 'text/html';
+        iframe.src = src;
+        iframe.style.border = 'none';
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.allowFullscreen = true;
+        iframe.referrerPolicy = 'origin-when-cross-origin';
+        container.appendChild(iframe);
+        div.appendChild(container);
+      });
 
-    twitchAnchors.forEach(([a, id]) => {
-      const div = getPreviewContainer(a);
-      if (!div || div.childNodes.length !== 0) {
-        return;
-      }
-      const container = createIframe(`https://clips.twitch.tv/embed?clip=${id}&parent=term.ptt.cc`);
-      div.appendChild(container);
-    });
-
-    observer.observe(mainContainer, config);
+      twitchAnchors.forEach(([a, id]) => {
+        const div = getPreviewContainer(a);
+        if (!div || div.childNodes.length !== 0) {
+          return;
+        }
+        const container = createIframe(`https://clips.twitch.tv/embed?clip=${id}&parent=term.ptt.cc`);
+        div.appendChild(container);
+      });
+    } finally {
+      observer.observe(mainContainer, observerOptions);
+    }
   }
 
   let timer = null;
@@ -240,5 +251,5 @@ new MutationObserver((records) => {
       }, 50);
     }
   });
-  observer.observe(mainContainer, config);
+  observer.observe(mainContainer, observerOptions);
 })();
