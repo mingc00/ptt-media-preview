@@ -20,6 +20,6 @@ Source files live in `src/`. Build the `dist/web.js` and `dist/term.js` content-
 npm run build
 ```
 
-Run `npm run build:chrome` or `npm run build:firefox` to build a release archive.
+Run `npm run build:package` to create the shared Chrome and Firefox release archive.
 
 ## [Changelog](CHANGELOG.md)

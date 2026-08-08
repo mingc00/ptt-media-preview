@@ -13,12 +13,6 @@ export default defineConfig([
     extends: ['js/recommended'],
   },
   {
-    files: ['background.js'],
-    languageOptions: {
-      globals: globals.webextensions,
-    },
-  },
-  {
     files: ['surge/*.js'],
     languageOptions: {
       globals: {

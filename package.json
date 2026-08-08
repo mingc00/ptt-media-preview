@@ -6,9 +6,8 @@
   "scripts": {
     "build": "npm run build:content",
     "build:content": "vite build --mode web && vite build --mode term",
-    "build:chrome": "npm run build:content && ./pack.py",
-    "build:firefox": "npm run build:content && ./pack.py v2",
-    "postversion": "jq --arg version \"$npm_package_version\" '.version = $version' manifest.json > manifest.json.tmp && mv manifest.json.tmp manifest.json && jq --arg version \"$npm_package_version\" '.version = $version' manifest.v2.json > manifest.v2.json.tmp && mv manifest.v2.json.tmp manifest.v2.json",
+    "build:package": "npm run build:content && ./pack.py",
+    "postversion": "jq --arg version \"$npm_package_version\" '.version = $version' manifest.json > manifest.json.tmp && mv manifest.json.tmp manifest.json",
     "format": "dprint fmt",
     "lint": "eslint . --ext .js,.ts --fix"
   },
