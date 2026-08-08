@@ -28,6 +28,7 @@ export function createIframeEl(src, { classes = [], referrerPolicy } = {}) {
   const iframe = document.createElement('iframe');
   iframe.classList.add(...classes);
   iframe.type = 'text/html';
+  iframe.loading = 'lazy';
   iframe.src = src;
   iframe.allowFullscreen = true;
   iframe.style.border = 'none';
