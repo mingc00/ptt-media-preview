@@ -78,16 +78,48 @@ new MutationObserver((records) => {
   }
 
   const processed = new WeakSet();
+  const pendingAnchors = new Set();
+  const pendingVideoImgs = new Set();
 
   function getNewElements(elements) {
     const results = [];
     for (const e of elements) {
-      if (!processed.has(e)) {
+      if (mainContainer.contains(e) && !processed.has(e)) {
         processed.add(e);
         results.push(e);
       }
     }
     return results;
+  }
+
+  function addMatchingElements(root, selector, elements) {
+    if (!(root instanceof Element)) {
+      return;
+    }
+    if (root.matches(selector)) {
+      elements.add(root);
+    }
+    for (const element of root.querySelectorAll(selector)) {
+      elements.add(element);
+    }
+  }
+
+  function collectCandidates(root) {
+    addMatchingElements(root, 'a', pendingAnchors);
+    addMatchingElements(root, 'img.hyperLinkPreview[src$=".mp4"]', pendingVideoImgs);
+
+    // The preview container may be inserted after its preceding anchor wrapper.
+    if (root instanceof Element && root.previousElementSibling) {
+      const sibling = root.previousElementSibling;
+      if (sibling.matches('a')) {
+        processed.delete(sibling);
+        pendingAnchors.add(sibling);
+      }
+      for (const anchor of sibling.querySelectorAll('a')) {
+        processed.delete(anchor);
+        pendingAnchors.add(anchor);
+      }
+    }
   }
 
   function getPreviewContainer(a) {
@@ -104,7 +136,8 @@ new MutationObserver((records) => {
       return;
     }
 
-    const as = getNewElements(mainContainer.querySelectorAll('a'));
+    const as = getNewElements(pendingAnchors);
+    pendingAnchors.clear();
     const mediaAnchors = as.map((a) => [a, classifyMediaUrl(a.href)]).filter(([, media]) => media);
     const imageAnchors = mediaAnchors
       .filter(([, media]) => media.kind === 'image')
@@ -114,9 +147,8 @@ new MutationObserver((records) => {
       });
     const albumAnchors = mediaAnchors.filter(([, media]) => media.kind === 'imgur-album');
 
-    const videoImgs = getNewElements(
-      mainContainer.querySelectorAll('img.hyperLinkPreview[src$=".mp4"]'),
-    );
+    const videoImgs = getNewElements(pendingVideoImgs);
+    pendingVideoImgs.clear();
 
     const ytAnchors = mediaAnchors.filter(([, media]) => media.kind === 'youtube');
 
@@ -191,13 +223,26 @@ new MutationObserver((records) => {
   }
 
   let timer = null;
-  const observer = new MutationObserver(function () {
+  function scheduleUpdate() {
     if (!timer) {
       timer = setTimeout(() => {
         onUpdate();
         timer = null;
       }, 50);
     }
+  }
+
+  const observer = new MutationObserver(function (records) {
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        collectCandidates(node);
+      }
+    }
+    if (pendingAnchors.size || pendingVideoImgs.size) {
+      scheduleUpdate();
+    }
   });
   observer.observe(mainContainer, observerOptions);
+  collectCandidates(mainContainer);
+  scheduleUpdate();
 })();
