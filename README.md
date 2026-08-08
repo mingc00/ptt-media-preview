@@ -17,9 +17,9 @@ You can install the latest version from the [Add-ons for Firefox](https://addons
 Source files live in `src/`. Build the `dist/web.js` and `dist/term.js` content-script bundles with:
 
 ```sh
-npm run build
+node --run build
 ```
 
-Run `npm run build:package` to create the shared Chrome and Firefox release archive.
+Run `node --run build:package` to create the shared Chrome and Firefox release archive.
 
 ## [Changelog](CHANGELOG.md)

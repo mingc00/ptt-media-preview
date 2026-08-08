@@ -4,9 +4,11 @@
   "type": "module",
   "description": "Enhanced Ptt link preview experience",
   "scripts": {
-    "build": "npm run build:content",
+    "build": "node --run build:content",
     "build:content": "vite build --mode web && vite build --mode term",
-    "build:package": "npm run build:content && node scripts/package.mjs",
+    "build:package": "node --run build:content && node scripts/package.mjs",
+    "check": "node --run check:format && node --run lint && node --run build:package",
+    "check:format": "dprint check --incremental=false",
     "postversion": "jq --arg version \"$npm_package_version\" '.version = $version' manifest.json > manifest.json.tmp && mv manifest.json.tmp manifest.json",
     "format": "dprint fmt",
     "lint": "eslint . --ext .js,.ts --fix"
