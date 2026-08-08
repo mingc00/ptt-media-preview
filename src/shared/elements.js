@@ -24,10 +24,7 @@ export function createVideoEl(
   return videoEl;
 }
 
-export function createIframeEl(
-  src,
-  { classes = [], referrerPolicy } = {},
-) {
+export function createIframeEl(src, { classes = [], referrerPolicy } = {}) {
   const iframe = document.createElement('iframe');
   iframe.classList.add(...classes);
   iframe.type = 'text/html';

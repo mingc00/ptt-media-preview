@@ -6,17 +6,9 @@ const iconFiles = (await readdir('icon'))
   .filter((file) => file.endsWith('.png'))
   .sort()
   .map((file) => `icon/${file}`);
-const files = [
-  'manifest.json',
-  'rules.json',
-  'dist/web.js',
-  'dist/term.js',
-  ...iconFiles,
-];
+const files = ['manifest.json', 'rules.json', 'dist/web.js', 'dist/term.js', ...iconFiles];
 const entries = Object.fromEntries(
-  await Promise.all(
-    files.map(async (file) => [file, await readFile(file)]),
-  ),
+  await Promise.all(files.map(async (file) => [file, await readFile(file)])),
 );
 const output = `ptt-imgur.${manifest.version}.zip`;
 

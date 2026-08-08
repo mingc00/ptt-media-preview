@@ -8,10 +8,11 @@
     "build:content": "vite build --mode web && vite build --mode term",
     "build:package": "node --run build:content && node scripts/package.mjs",
     "check": "node --run check:format && node --run lint && node --run build:package",
-    "check:format": "dprint check --incremental=false",
+    "check:format": "oxfmt --check",
     "postversion": "jq --arg version \"$npm_package_version\" '.version = $version' manifest.json > manifest.json.tmp && mv manifest.json.tmp manifest.json",
-    "format": "dprint fmt",
-    "lint": "eslint . --ext .js,.ts --fix"
+    "format": "oxfmt --write",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
   },
   "repository": {
     "type": "git",
@@ -24,11 +25,9 @@
   },
   "homepage": "https://github.com/mingc00/ptt-media-preview#readme",
   "devDependencies": {
-    "@eslint/js": "^9.23.0",
-    "dprint": "^0.49.1",
-    "eslint": "^9.23.0",
     "fflate": "^0.8.3",
-    "globals": "^16.0.0",
+    "oxfmt": "^0.62.0",
+    "oxlint": "^1.77.0",
     "vite": "^8.2.1"
   }
 }

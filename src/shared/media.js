@@ -45,16 +45,16 @@ export function classifyMediaUrl(rawUrl) {
 
   if (url.protocol === 'https:' && url.hostname === 'youtu.be') {
     const id = url.pathname.match(/^\/([\w-]+)\/?$/)?.[1];
-    return id
-      ? { kind: 'youtube', id, start: url.searchParams.get('t') }
-      : null;
+    return id ? { kind: 'youtube', id, start: url.searchParams.get('t') } : null;
   }
 
-  if (url.protocol === 'https:' && url.hostname === 'www.youtube.com' && url.pathname === '/watch') {
+  if (
+    url.protocol === 'https:' &&
+    url.hostname === 'www.youtube.com' &&
+    url.pathname === '/watch'
+  ) {
     const id = url.searchParams.get('v')?.match(/^[\w-]+$/)?.[0];
-    return id
-      ? { kind: 'youtube', id, start: url.searchParams.get('t') }
-      : null;
+    return id ? { kind: 'youtube', id, start: url.searchParams.get('t') } : null;
   }
 
   if (url.protocol === 'https:' && url.hostname === 'clips.twitch.tv') {

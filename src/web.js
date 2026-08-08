@@ -3,11 +3,9 @@ import { getTwitchEmbedUrl, getYoutubeEmbedUrl } from './shared/embed.js';
 import { resolveAlbum, resolveUnknown } from './shared/imgur.js';
 import { classifyMediaUrl } from './shared/media.js';
 
-const links = document.querySelectorAll([
-  'a[href*="//imgur.com"]',
-  'a[href*="//i.imgur.com/"]',
-  'a[href*=".webp"]',
-].join(','));
+const links = document.querySelectorAll(
+  ['a[href*="//imgur.com"]', 'a[href*="//i.imgur.com/"]', 'a[href*=".webp"]'].join(','),
+);
 function createDiv(...classes) {
   const div = document.createElement('div');
   div.classList.add(...classes);
@@ -80,10 +78,9 @@ for (const a of document.querySelectorAll('a[href^="https://clips.twitch.tv"]'))
   if (media?.kind !== 'twitch') {
     continue;
   }
-  const iframe = createIframeEl(
-    getTwitchEmbedUrl(media.id, 'www.ptt.cc'),
-    { classes: ['youtube-player'] },
-  );
+  const iframe = createIframeEl(getTwitchEmbedUrl(media.id, 'www.ptt.cc'), {
+    classes: ['youtube-player'],
+  });
   const contentDiv = createDiv('resize-content');
   contentDiv.appendChild(iframe);
   const container = createDiv('resize-container');
@@ -91,7 +88,9 @@ for (const a of document.querySelectorAll('a[href^="https://clips.twitch.tv"]'))
   insertPreview(a, container);
 }
 
-for (const a of document.querySelectorAll('a[href^="https://pbs.twimg.com/media/"][href*="?format="]')) {
+for (const a of document.querySelectorAll(
+  'a[href^="https://pbs.twimg.com/media/"][href*="?format="]',
+)) {
   const media = classifyMediaUrl(a.href);
   if (media?.kind === 'image') {
     insertPreview(a, createLazyImageEl(media.src));

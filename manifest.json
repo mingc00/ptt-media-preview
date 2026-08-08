@@ -7,14 +7,8 @@
     "128": "icon/128.png",
     "256": "icon/256.png"
   },
-  "permissions": [
-    "declarativeNetRequest"
-  ],
-  "host_permissions": [
-    "https://*.imgur.com/*",
-    "https://www.ptt.cc/*",
-    "https://term.ptt.cc/"
-  ],
+  "permissions": ["declarativeNetRequest"],
+  "host_permissions": ["https://*.imgur.com/*", "https://www.ptt.cc/*", "https://term.ptt.cc/"],
   "content_scripts": [
     {
       "matches": ["https://www.ptt.cc/bbs/*"],
@@ -26,11 +20,13 @@
     }
   ],
   "declarative_net_request": {
-    "rule_resources": [{
-      "id": "rule_set",
-      "enabled": true,
-      "path": "rules.json"
-    }]
+    "rule_resources": [
+      {
+        "id": "rule_set",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
   },
   "manifest_version": 3
 }

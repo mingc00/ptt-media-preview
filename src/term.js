@@ -105,34 +105,29 @@ new MutationObserver((records) => {
     }
 
     const as = getNewElements(mainContainer.querySelectorAll('a'));
-    const mediaAnchors = as
-      .map((a) => [a, classifyMediaUrl(a.href)])
-      .filter(([, media]) => media);
+    const mediaAnchors = as.map((a) => [a, classifyMediaUrl(a.href)]).filter(([, media]) => media);
     const imageAnchors = mediaAnchors
       .filter(([, media]) => media.kind === 'image')
       .filter(([a]) => {
         const container = getPreviewContainer(a);
         return container && !container.firstChild;
       });
-    const albumAnchors = mediaAnchors
-      .filter(([, media]) => media.kind === 'imgur-album');
+    const albumAnchors = mediaAnchors.filter(([, media]) => media.kind === 'imgur-album');
 
     const videoImgs = getNewElements(
       mainContainer.querySelectorAll('img.hyperLinkPreview[src$=".mp4"]'),
     );
 
-    const ytAnchors = mediaAnchors
-      .filter(([, media]) => media.kind === 'youtube');
+    const ytAnchors = mediaAnchors.filter(([, media]) => media.kind === 'youtube');
 
-    const twitchAnchors = mediaAnchors
-      .filter(([, media]) => media.kind === 'twitch');
+    const twitchAnchors = mediaAnchors.filter(([, media]) => media.kind === 'twitch');
 
     if (
-      imageAnchors.length === 0
-      && albumAnchors.length === 0
-      && videoImgs.length === 0
-      && ytAnchors.length === 0
-      && twitchAnchors.length === 0
+      imageAnchors.length === 0 &&
+      albumAnchors.length === 0 &&
+      videoImgs.length === 0 &&
+      ytAnchors.length === 0 &&
+      twitchAnchors.length === 0
     ) {
       return;
     }
@@ -156,9 +151,7 @@ new MutationObserver((records) => {
         }
         const links = await resolveAlbum(media.hash);
         for (const link of links) {
-          div.appendChild(
-            link.endsWith('.gif') ? createImgurGif(link) : createImage(link),
-          );
+          div.appendChild(link.endsWith('.gif') ? createImgurGif(link) : createImage(link));
         }
       });
 
@@ -185,10 +178,9 @@ new MutationObserver((records) => {
         if (!div || div.childNodes.length !== 0) {
           return;
         }
-        const iframe = createIframeEl(
-          getTwitchEmbedUrl(media.id, 'term.ptt.cc'),
-          { referrerPolicy: 'origin-when-cross-origin' },
-        );
+        const iframe = createIframeEl(getTwitchEmbedUrl(media.id, 'term.ptt.cc'), {
+          referrerPolicy: 'origin-when-cross-origin',
+        });
         div.appendChild(createEmbedContainer(iframe));
       });
     } finally {
@@ -197,7 +189,7 @@ new MutationObserver((records) => {
   }
 
   let timer = null;
-  const observer = new MutationObserver(function() {
+  const observer = new MutationObserver(function () {
     if (!timer) {
       timer = setTimeout(() => {
         onUpdate();

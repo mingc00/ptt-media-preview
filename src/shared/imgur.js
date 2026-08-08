@@ -8,14 +8,11 @@ async function get(path) {
     '88f07b92270c5f2',
   ];
   const clientID = clientIDs[Math.floor(Math.random() * clientIDs.length)];
-  const response = await fetch(
-    `https://api.imgur.com/3/${path}?client_id=${clientID}`,
-    {
-      method: 'GET',
-      mode: 'cors',
-      referrerPolicy: 'no-referrer',
-    },
-  );
+  const response = await fetch(`https://api.imgur.com/3/${path}?client_id=${clientID}`, {
+    method: 'GET',
+    mode: 'cors',
+    referrerPolicy: 'no-referrer',
+  });
   return await response.json();
 }
 
