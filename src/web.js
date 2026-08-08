@@ -1,9 +1,6 @@
-import {
-  createImageEl,
-  createVideoEl,
-  resolveAlbum,
-  resolveUnknown,
-} from './shared/imgur.js';
+import { createIframeEl, createImageEl, createVideoEl } from './shared/elements.js';
+import { getTwitchEmbedUrl, getYoutubeEmbedUrl } from './shared/embed.js';
+import { resolveAlbum, resolveUnknown } from './shared/imgur.js';
 import { classifyMediaUrl } from './shared/media.js';
 
 const links = document.querySelectorAll([
@@ -24,9 +21,7 @@ function insertPreview(anchor, el) {
 }
 
 function createLazyImageEl(src) {
-  const imgEl = createImageEl(src);
-  imgEl.loading = 'lazy';
-  return imgEl;
+  return createImageEl(src, { loading: 'lazy' });
 }
 
 function fixBrokenPreview(anchor) {
@@ -85,12 +80,10 @@ for (const a of document.querySelectorAll('a[href^="https://clips.twitch.tv"]'))
   if (media?.kind !== 'twitch') {
     continue;
   }
-  const iframe = document.createElement('iframe');
-  iframe.classList.add('youtube-player');
-  iframe.type = 'text/html';
-  iframe.src = `https://clips.twitch.tv/embed?clip=${media.id}&parent=www.ptt.cc`;
-  iframe.allowFullscreen = true;
-  iframe.style.border = 'none';
+  const iframe = createIframeEl(
+    getTwitchEmbedUrl(media.id, 'www.ptt.cc'),
+    { classes: ['youtube-player'] },
+  );
   const contentDiv = createDiv('resize-content');
   contentDiv.appendChild(iframe);
   const container = createDiv('resize-container');
@@ -113,6 +106,6 @@ for (const a of document.querySelectorAll('a[href^="https://youtu.be/"]')) {
   }
   const iframe = document.querySelector(`iframe.youtube-player[src*="/${media.id}"]`);
   if (iframe) {
-    iframe.src += `?start=${media.start}`;
+    iframe.src = getYoutubeEmbedUrl(media);
   }
 }

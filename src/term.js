@@ -1,4 +1,6 @@
-import { createImageEl, resolveAlbum } from './shared/imgur.js';
+import { createIframeEl, createImageEl, createVideoEl } from './shared/elements.js';
+import { getTwitchEmbedUrl, getYoutubeEmbedUrl } from './shared/embed.js';
+import { resolveAlbum } from './shared/imgur.js';
 import { classifyMediaUrl } from './shared/media.js';
 
 function getConfig() {
@@ -50,35 +52,27 @@ new MutationObserver((records) => {
   };
 
   function createImage(url) {
-    const img = createImageEl(url);
-    img.classList.add('easyReadingImg', 'hyperLinkPreview');
-    return img;
+    return createImageEl(url, {
+      classes: ['easyReadingImg', 'hyperLinkPreview'],
+    });
   }
 
   function createImgurGif(url) {
-    const video = document.createElement('video');
-    video.classList.add('easyReadingImg', 'hyperLinkPreview');
-    video.src = url.replace(/\.gif$/, '.mp4');
-    video.loop = true;
-    video.autoplay = true;
-    video.controls = false;
-    return video;
+    return createVideoEl(url.replace(/\.gif$/, '.mp4'), {
+      autoplay: true,
+      classes: ['easyReadingImg', 'hyperLinkPreview'],
+      controls: false,
+      loop: true,
+    });
   }
 
-  function createIframe(src) {
+  function createEmbedContainer(iframe) {
     const container = document.createElement('div');
     container.style.margin = '0.5em auto';
     container.style.maxWidth = '800px';
     container.style.height = '450px';
-
-    const iframe = document.createElement('iframe');
-    iframe.type = 'text/html';
-    iframe.src = src;
-    iframe.style.border = 'none';
     iframe.style.width = '100%';
     iframe.style.height = '100%';
-    iframe.allowFullscreen = true;
-    iframe.referrerPolicy = 'origin-when-cross-origin';
     container.appendChild(iframe);
     return container;
   }
@@ -169,10 +163,9 @@ new MutationObserver((records) => {
       });
 
       videoImgs.forEach((img) => {
-        const videoEl = document.createElement('video');
-        videoEl.src = img.src;
-        videoEl.classList.add('easyReadingImg', 'hyperLinkPreview');
-        videoEl.controls = true;
+        const videoEl = createVideoEl(img.src, {
+          classes: ['easyReadingImg', 'hyperLinkPreview'],
+        });
         img.parentNode?.replaceChild(videoEl, img);
       });
 
@@ -181,24 +174,10 @@ new MutationObserver((records) => {
         if (!div || div.childNodes.length !== 0) {
           return;
         }
-        let src = `https://www.youtube.com/embed/${media.id}`;
-        if (media.start) {
-          src += `?start=${media.start}`;
-        }
-        const container = document.createElement('div');
-        container.style.margin = '0.5em auto';
-        container.style.maxWidth = '800px';
-        container.style.height = '450px';
-        const iframe = document.createElement('iframe');
-        iframe.type = 'text/html';
-        iframe.src = src;
-        iframe.style.border = 'none';
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
-        iframe.allowFullscreen = true;
-        iframe.referrerPolicy = 'origin-when-cross-origin';
-        container.appendChild(iframe);
-        div.appendChild(container);
+        const iframe = createIframeEl(getYoutubeEmbedUrl(media), {
+          referrerPolicy: 'origin-when-cross-origin',
+        });
+        div.appendChild(createEmbedContainer(iframe));
       });
 
       twitchAnchors.forEach(([a, media]) => {
@@ -206,10 +185,11 @@ new MutationObserver((records) => {
         if (!div || div.childNodes.length !== 0) {
           return;
         }
-        const container = createIframe(
-          `https://clips.twitch.tv/embed?clip=${media.id}&parent=term.ptt.cc`,
+        const iframe = createIframeEl(
+          getTwitchEmbedUrl(media.id, 'term.ptt.cc'),
+          { referrerPolicy: 'origin-when-cross-origin' },
         );
-        div.appendChild(container);
+        div.appendChild(createEmbedContainer(iframe));
       });
     } finally {
       observer.observe(mainContainer, observerOptions);

@@ -19,22 +19,6 @@ async function get(path) {
   return await response.json();
 }
 
-export function createVideoEl(src) {
-  const videoEl = document.createElement('video');
-  videoEl.src = src;
-  videoEl.controls = true;
-  return videoEl;
-}
-
-export function createImageEl(src) {
-  const imgEl = document.createElement('img');
-  if (!src.startsWith('https://i.verb.tw/')) {
-    imgEl.referrerPolicy = 'no-referrer';
-  }
-  imgEl.src = src;
-  return imgEl;
-}
-
 export async function resolveAlbum(hash) {
   try {
     const {
