@@ -1,6 +1,6 @@
 {
   "name": "ptt-media-preview",
-  "version": "5.5.2",
+  "version": "6.0.0",
   "type": "module",
   "description": "Enhanced Ptt link preview experience",
   "scripts": {

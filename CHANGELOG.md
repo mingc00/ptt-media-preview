@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 6.0.0 (2026-08-08)
+
+- Share preview and media handling between web and terminal content scripts
+- Bundle content scripts with Vite
+- Use one Manifest V3 package for Chrome and Firefox
+- Replace the Python packer with a Node.js build task
+- Add GitHub Actions validation
+
 ## 5.5.6 (2026-04-01)
 
 - Update heuristic for meee.com.tw
