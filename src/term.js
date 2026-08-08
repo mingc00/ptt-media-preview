@@ -1,3 +1,6 @@
+import { createImageEl, resolveAlbum } from './shared/imgur.js';
+import { classifyMediaUrl } from './shared/media.js';
+
 function getConfig() {
   const raw = localStorage['pttchrome.pref.v1'];
   const config = {
@@ -108,51 +111,32 @@ new MutationObserver((records) => {
     }
 
     const as = getNewElements(mainContainer.querySelectorAll('a'));
-    const imgurAlbumRe = /https?:\/\/(?:[mi]\.)?imgur.com\/(?:a|gallery)\/(\w+)/;
-    const targets = as.filter(
-      (a) =>
-        (/(png|jpeg|jpg|gif|webp)$/i.test(a.href) && !imgurAlbumRe.test(a.href))
-        || a.href.startsWith('https://pbs.twimg.com/media/'),
-    ).filter((a) => {
-      const container = getPreviewContainer(a);
-      return container && !container.firstChild;
-    });
-    const albumAnchors = as
-      .map((a) => {
-        const hash = a.href.match(
-          imgurAlbumRe,
-        )?.[1];
-        return hash ? [a, hash] : null;
-      })
-      .filter((e) => e);
+    const mediaAnchors = as
+      .map((a) => [a, classifyMediaUrl(a.href)])
+      .filter(([, media]) => media);
+    const imageAnchors = mediaAnchors
+      .filter(([, media]) => media.kind === 'image')
+      .filter(([a]) => {
+        const container = getPreviewContainer(a);
+        return container && !container.firstChild;
+      });
+    const albumAnchors = mediaAnchors
+      .filter(([, media]) => media.kind === 'imgur-album');
 
     const videoImgs = getNewElements(
       mainContainer.querySelectorAll('img.hyperLinkPreview[src$=".mp4"]'),
     );
 
-    const meeeAnchors = as
-      .filter(a => /^https:\/\/meee\.com\.tw\/\w+$/.test(a.href));
+    const ytAnchors = mediaAnchors
+      .filter(([, media]) => media.kind === 'youtube');
 
-    const ytAnchors = as
-      .map((a) => {
-        const id = a.href.match(
-          /https:\/\/(?:youtu\.be\/|www\.youtube\.com\/watch\?v=)([\w-]+)/,
-        )?.[1];
-        return id ? [a, id] : null;
-      })
-      .filter((e) => e);
-
-    const twitchAnchors = as
-      .map((a) => {
-        const id = a.href.match(/https:\/\/clips\.twitch\.tv\/([\w-]+)/)?.[1];
-        return id ? [a, id] : null;
-      }).filter((e) => e);
+    const twitchAnchors = mediaAnchors
+      .filter(([, media]) => media.kind === 'twitch');
 
     if (
-      targets.length === 0
+      imageAnchors.length === 0
       && albumAnchors.length === 0
       && videoImgs.length === 0
-      && meeeAnchors.length === 0
       && ytAnchors.length === 0
       && twitchAnchors.length === 0
     ) {
@@ -161,14 +145,14 @@ new MutationObserver((records) => {
 
     observer.disconnect();
     try {
-      targets.forEach((a) => {
+      imageAnchors.forEach(([a, media]) => {
         const div = getPreviewContainer(a);
         if (div) {
-          div.appendChild(createImage(a.href));
+          div.appendChild(createImage(media.src));
         }
       });
 
-      albumAnchors.forEach(async ([a, hash]) => {
+      albumAnchors.forEach(async ([a, media]) => {
         const div = getPreviewContainer(a);
         if (!div) {
           return;
@@ -176,7 +160,7 @@ new MutationObserver((records) => {
         while (div.firstChild) {
           div.removeChild(div.lastChild);
         }
-        const links = await resolveAlbum(hash);
+        const links = await resolveAlbum(media.hash);
         for (const link of links) {
           div.appendChild(
             link.endsWith('.gif') ? createImgurGif(link) : createImage(link),
@@ -192,26 +176,14 @@ new MutationObserver((records) => {
         img.parentNode?.replaceChild(videoEl, img);
       });
 
-      meeeAnchors.forEach((a) => {
-        const div = getPreviewContainer(a);
-        if (!div) {
-          return;
-        }
-        const url = new URL(a.href);
-        url.host = `i.${url.host}`;
-        url.pathname += '.jpg';
-        div.appendChild(createImage(url.toString()));
-      });
-
-      ytAnchors.forEach(([a, id]) => {
+      ytAnchors.forEach(([a, media]) => {
         const div = getPreviewContainer(a);
         if (!div || div.childNodes.length !== 0) {
           return;
         }
-        const url = new URL(a.href);
-        let src = `https://www.youtube.com/embed/${id}`;
-        if (url.searchParams.has('t')) {
-          src += `?start=${url.searchParams.get('t')}`;
+        let src = `https://www.youtube.com/embed/${media.id}`;
+        if (media.start) {
+          src += `?start=${media.start}`;
         }
         const container = document.createElement('div');
         container.style.margin = '0.5em auto';
@@ -229,12 +201,14 @@ new MutationObserver((records) => {
         div.appendChild(container);
       });
 
-      twitchAnchors.forEach(([a, id]) => {
+      twitchAnchors.forEach(([a, media]) => {
         const div = getPreviewContainer(a);
         if (!div || div.childNodes.length !== 0) {
           return;
         }
-        const container = createIframe(`https://clips.twitch.tv/embed?clip=${id}&parent=term.ptt.cc`);
+        const container = createIframe(
+          `https://clips.twitch.tv/embed?clip=${media.id}&parent=term.ptt.cc`,
+        );
         div.appendChild(container);
       });
     } finally {

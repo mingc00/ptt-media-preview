@@ -15,9 +15,8 @@ with open(manifest, 'r') as f:
     version=json.load(f)['version']
 
 files = [
-    'imgur.js',
-    'web.js',
-    'term.js',
+    'dist/web.js',
+    'dist/term.js',
 ] + glob.glob('icon/*.png')
 
 if manifest_v2:

@@ -12,4 +12,14 @@ You can install the latest version from the [Chrome Web Store](https://chromeweb
 
 You can install the latest version from the [Add-ons for Firefox](https://addons.mozilla.org/zh-TW/firefox/addon/ptt-imgur-fix/).
 
+## Development
+
+Source files live in `src/`. Build the `dist/web.js` and `dist/term.js` content-script bundles with:
+
+```sh
+npm run build
+```
+
+Run `npm run build:chrome` or `npm run build:firefox` to build a release archive.
+
 ## [Changelog](CHANGELOG.md)

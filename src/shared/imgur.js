@@ -19,14 +19,14 @@ async function get(path) {
   return await response.json();
 }
 
-function createVideoEl(src) {
+export function createVideoEl(src) {
   const videoEl = document.createElement('video');
   videoEl.src = src;
   videoEl.controls = true;
   return videoEl;
 }
 
-function createImageEl(src) {
+export function createImageEl(src) {
   const imgEl = document.createElement('img');
   if (!src.startsWith('https://i.verb.tw/')) {
     imgEl.referrerPolicy = 'no-referrer';
@@ -35,7 +35,7 @@ function createImageEl(src) {
   return imgEl;
 }
 
-async function resolveAlbum(hash) {
+export async function resolveAlbum(hash) {
   try {
     const {
       data: { images },
@@ -48,7 +48,7 @@ async function resolveAlbum(hash) {
   }
 }
 
-async function resolveUnknown(hash) {
+export async function resolveUnknown(hash) {
   try {
     const {
       data: { type, link },

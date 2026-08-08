@@ -18,11 +18,11 @@
   "content_scripts": [
     {
       "matches": ["https://www.ptt.cc/bbs/*"],
-      "js": ["imgur.js", "web.js"]
+      "js": ["dist/web.js"]
     },
     {
       "matches": ["https://term.ptt.cc/"],
-      "js": ["imgur.js", "term.js"]
+      "js": ["dist/term.js"]
     }
   ],
   "declarative_net_request": {

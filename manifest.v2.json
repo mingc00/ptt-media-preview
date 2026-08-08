@@ -20,11 +20,11 @@
   "content_scripts": [
     {
       "matches": ["https://www.ptt.cc/*.html"],
-      "js": ["imgur.js", "web.js"]
+      "js": ["dist/web.js"]
     },
     {
       "matches": ["https://term.ptt.cc/"],
-      "js": ["imgur.js", "term.js"]
+      "js": ["dist/term.js"]
     }
   ],
   "manifest_version": 2

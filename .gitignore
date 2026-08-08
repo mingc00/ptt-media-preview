@@ -2,3 +2,4 @@
 _metadata
 *.zip
 node_modules
+dist

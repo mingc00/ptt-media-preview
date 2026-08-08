@@ -1,9 +1,16 @@
+import {
+  createImageEl,
+  createVideoEl,
+  resolveAlbum,
+  resolveUnknown,
+} from './shared/imgur.js';
+import { classifyMediaUrl } from './shared/media.js';
+
 const links = document.querySelectorAll([
   'a[href*="//imgur.com"]',
   'a[href*="//i.imgur.com/"]',
   'a[href*=".webp"]',
 ].join(','));
-
 function createDiv(...classes) {
   const div = document.createElement('div');
   div.classList.add(...classes);
@@ -35,15 +42,13 @@ const albums = [];
 const unknownHashes = [];
 
 for (const a of links) {
-  const url = new URL(a.href);
-  const { pathname } = url;
-  let match = null;
-  if ((match = pathname.match(/^\/(?:a|gallery)\/(\w+)/))) {
-    albums.push([a, match[1]]);
-  } else if (/(png|jpeg|jpg|gif|webp)$/i.test(pathname)) {
+  const media = classifyMediaUrl(a.href);
+  if (media?.kind === 'imgur-album') {
+    albums.push([a, media.hash]);
+  } else if (media?.kind === 'image') {
     fixBrokenPreview(a);
-  } else if ((match = pathname.match(/^\/(\w+)$/))) {
-    unknownHashes.push([a, match[1]]);
+  } else if (media?.kind === 'imgur-unknown') {
+    unknownHashes.push([a, media.hash]);
   }
 }
 
@@ -68,21 +73,22 @@ unknownHashes.forEach(async ([a, hash]) => {
 });
 
 for (const a of document.querySelectorAll('a[href^="https://meee.com.tw/"]')) {
-  const url = new URL(a.href);
-  if (!url.pathname.match(/^\/\w+$/)) {
+  const media = classifyMediaUrl(a.href);
+  if (media?.kind !== 'image') {
     continue;
   }
-  url.host = `i.${url.host}`;
-  url.pathname += '.jpg';
-  insertPreview(a, createLazyImageEl(url.toString()));
+  insertPreview(a, createLazyImageEl(media.src));
 }
 
 for (const a of document.querySelectorAll('a[href^="https://clips.twitch.tv"]')) {
-  const url = new URL(a.href);
+  const media = classifyMediaUrl(a.href);
+  if (media?.kind !== 'twitch') {
+    continue;
+  }
   const iframe = document.createElement('iframe');
   iframe.classList.add('youtube-player');
   iframe.type = 'text/html';
-  iframe.src = `https://clips.twitch.tv/embed?clip=${url.pathname.slice(1)}&parent=www.ptt.cc`;
+  iframe.src = `https://clips.twitch.tv/embed?clip=${media.id}&parent=www.ptt.cc`;
   iframe.allowFullscreen = true;
   iframe.style.border = 'none';
   const contentDiv = createDiv('resize-content');
@@ -93,18 +99,20 @@ for (const a of document.querySelectorAll('a[href^="https://clips.twitch.tv"]'))
 }
 
 for (const a of document.querySelectorAll('a[href^="https://pbs.twimg.com/media/"][href*="?format="]')) {
-  insertPreview(a, createLazyImageEl(a.href));
+  const media = classifyMediaUrl(a.href);
+  if (media?.kind === 'image') {
+    insertPreview(a, createLazyImageEl(media.src));
+  }
 }
 
 // fix youtube links with start time
 for (const a of document.querySelectorAll('a[href^="https://youtu.be/"]')) {
-  const url = new URL(a.href);
-  const start = url.searchParams.get('t');
-  if (!start) {
+  const media = classifyMediaUrl(a.href);
+  if (media?.kind !== 'youtube' || !media.start) {
     continue;
   }
-  const iframe = document.querySelector(`iframe.youtube-player[src*="${url.pathname}"]`);
+  const iframe = document.querySelector(`iframe.youtube-player[src*="/${media.id}"]`);
   if (iframe) {
-    iframe.src += `?start=${start}`;
+    iframe.src += `?start=${media.start}`;
   }
 }
