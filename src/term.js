@@ -150,9 +150,11 @@ new MutationObserver((records) => {
           div.removeChild(div.lastChild);
         }
         const links = await resolveAlbum(media.hash);
+        const fragment = document.createDocumentFragment();
         for (const link of links) {
-          div.appendChild(link.endsWith('.gif') ? createImgurGif(link) : createImage(link));
+          fragment.appendChild(link.endsWith('.gif') ? createImgurGif(link) : createImage(link));
         }
+        div.appendChild(fragment);
       });
 
       videoImgs.forEach((img) => {
