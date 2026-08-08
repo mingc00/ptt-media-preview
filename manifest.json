@@ -9,6 +9,14 @@
   },
   "permissions": ["declarativeNetRequest"],
   "host_permissions": ["https://*.imgur.com/*", "https://www.ptt.cc/*", "https://term.ptt.cc/"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{6828ee93-3dd4-48d8-a97c-071248766757}",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
   "content_scripts": [
     {
       "matches": ["https://www.ptt.cc/bbs/*"],
