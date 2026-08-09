@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 6.1.0 (2026-08-09)
+
+- Improve terminal preview performance with batched and incremental DOM updates
+- Lazy-load embedded iframes
+- Add the Firefox extension ID and data collection consent declaration
+- Load the Surge module script from the document head
+- Migrate linting and formatting to Oxlint and Oxfmt
+
 ## 6.0.0 (2026-08-08)
 
 - Share preview and media handling between web and terminal content scripts
