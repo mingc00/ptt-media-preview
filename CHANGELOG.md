@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 6.2.0 (2026-08-20)
+
+- Add floating image previews when Easy Reading is disabled and Picture Preview is enabled
+- Hide PttChrome's native image preview to prevent duplicate images
+- Keep previews within the viewport without intercepting pointer events
+- Remove stale previews when navigating between articles
+
 ## 6.1.0 (2026-08-09)
 
 - Improve terminal preview performance with batched and incremental DOM updates
