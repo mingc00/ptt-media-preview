@@ -1,7 +1,8 @@
 import { createIframeEl, createImageEl, createVideoEl } from './shared/elements.js';
 import { getTwitchEmbedUrl, getYoutubeEmbedUrl } from './shared/embed.js';
-import { resolveAlbum } from './shared/imgur.js';
+import { resolveAlbum, resolveUnknown } from './shared/imgur.js';
 import { classifyMediaUrl } from './shared/media.js';
+import { createImageLinkPreviewer } from './shared/previewer.js';
 
 function getConfig() {
   const raw = localStorage['pttchrome.pref.v1'];
@@ -22,13 +23,15 @@ function getConfig() {
   return config;
 }
 
-let { isEasyReadingEnabled } = getConfig();
+let { isEasyReadingEnabled, isPicPreviewEnabled } = getConfig();
+let handleConfigChange = () => {};
 
 new MutationObserver((records) => {
   for (const record of records) {
     for (const node of record.removedNodes) {
       if (node.role === 'dialog') {
-        ({ isEasyReadingEnabled } = getConfig());
+        ({ isEasyReadingEnabled, isPicPreviewEnabled } = getConfig());
+        handleConfigChange();
         return;
       }
     }
@@ -50,6 +53,39 @@ new MutationObserver((records) => {
     childList: true,
     subtree: true,
   };
+
+  function isLinkPreviewEnabled() {
+    return !isEasyReadingEnabled && isPicPreviewEnabled;
+  }
+
+  let linkPreviewer = null;
+  function syncLinkPreviewer() {
+    if (linkPreviewer) {
+      linkPreviewer.refresh();
+      return;
+    }
+    if (!isLinkPreviewEnabled()) {
+      return;
+    }
+    linkPreviewer = createImageLinkPreviewer(mainContainer, {
+      isEnabled: isLinkPreviewEnabled,
+      async resolveSrc(anchor) {
+        const media = classifyMediaUrl(anchor.href);
+        if (media?.kind === 'image') {
+          return media.src;
+        }
+        if (media?.kind === 'imgur-album') {
+          return (await resolveAlbum(media.hash))[0];
+        }
+        if (media?.kind === 'imgur-unknown') {
+          const { type, link } = await resolveUnknown(media.hash);
+          return type.startsWith('image/') ? link : null;
+        }
+        return null;
+      },
+    });
+  }
+  syncLinkPreviewer();
 
   function createImage(url) {
     return createImageEl(url, {
@@ -231,6 +267,12 @@ new MutationObserver((records) => {
       }, 50);
     }
   }
+
+  handleConfigChange = () => {
+    syncLinkPreviewer();
+    collectCandidates(mainContainer);
+    scheduleUpdate();
+  };
 
   const observer = new MutationObserver(function (records) {
     for (const record of records) {
