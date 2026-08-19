@@ -3,3 +3,5 @@ _metadata
 *.zip
 node_modules
 dist
+store.env
+gha-creds-*.json

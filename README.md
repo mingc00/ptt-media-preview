@@ -22,4 +22,7 @@ node --run build
 
 Run `node --run build:package` to create the shared Chrome and Firefox release archive.
 
+Store releases are submitted through GitHub Actions. See [Publishing releases](docs/releasing.md) for the
+required GitHub environment, credentials, and release steps.
+
 ## [Changelog](CHANGELOG.md)

@@ -1,0 +1,183 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub release tag to publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  build:
+    name: Validate and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      package_name: ${{ steps.release.outputs.package_name }}
+      source_name: ${{ steps.release.outputs.source_name }}
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate and build package
+        run: node --run check
+
+      - name: Verify release version
+        id: release
+        shell: bash
+        run: |
+          package_version=$(node -p "require('./package.json').version")
+          manifest_version=$(node -p "require('./manifest.json').version")
+          expected_tag="v${package_version}"
+
+          if [[ "$package_version" != "$manifest_version" ]]; then
+            echo "package.json (${package_version}) and manifest.json (${manifest_version}) do not match" >&2
+            exit 1
+          fi
+
+          if [[ "$RELEASE_TAG" != "$expected_tag" ]]; then
+            echo "Release tag must be ${expected_tag}, got ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+          package_name="ptt-imgur.${package_version}.zip"
+          source_name="ptt-imgur-source.${package_version}.zip"
+          git archive --format=zip --output="$source_name" HEAD
+
+          echo "package_name=${package_name}" >> "$GITHUB_OUTPUT"
+          echo "source_name=${source_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Store release artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: extension-release
+          path: |
+            ${{ steps.release.outputs.package_name }}
+            ${{ steps.release.outputs.source_name }}
+          if-no-files-found: error
+
+      - name: Attach packages to GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release upload "$RELEASE_TAG"
+          "${{ steps.release.outputs.package_name }}"
+          "${{ steps.release.outputs.source_name }}"
+          --clobber
+
+  publish-chrome:
+    name: Publish to Chrome Web Store
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 26
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: extension-release
+          path: release
+
+      - name: Authenticate to Google Cloud
+        id: google-auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+
+      - name: Upload and submit Chrome extension
+        env:
+          CHROME_WEB_STORE_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+          CHROME_WEB_STORE_PUBLISHER_ID: ${{ vars.CHROME_WEB_STORE_PUBLISHER_ID }}
+          CHROME_WEB_STORE_EXTENSION_ID: ${{ vars.CHROME_WEB_STORE_EXTENSION_ID }}
+          EXTENSION_ZIP: release/${{ needs.build.outputs.package_name }}
+        run: node --run publish:chrome
+
+  publish-firefox:
+    name: Publish to Firefox Add-ons
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: extension-release
+          path: release
+
+      - name: Prepare Firefox package
+        run: unzip -q "release/${{ needs.build.outputs.package_name }}" -d release/firefox
+
+      - name: Submit Firefox extension for review
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: >-
+          npx web-ext sign
+          --source-dir release/firefox
+          --channel listed
+          --approval-timeout 0
+          --upload-source-code "release/${{ needs.build.outputs.source_name }}"
+          --no-input
