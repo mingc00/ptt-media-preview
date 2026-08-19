@@ -23,7 +23,6 @@ export default defineConfig(({ mode }) => {
       },
       minify: false,
       outDir: 'dist',
-      target: 'es2020',
     },
   };
 });
