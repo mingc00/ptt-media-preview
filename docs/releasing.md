@@ -1,9 +1,10 @@
 # Publishing releases
 
-Publishing starts when a GitHub release named `v<version>` is published. The tag, `package.json`, and
-`manifest.json` versions must match. The workflow builds the extension, attaches the extension and source
-archives to the GitHub release, waits for approval from the `production` environment, and then submits the
-release to Chrome Web Store and Firefox Add-ons separately.
+Publishing starts when a tag matching `v*.*.*` is pushed. The tag, `package.json`, and `manifest.json`
+versions must match exactly (for example, tag `v6.2.1` requires version `6.2.1` in both files). The workflow
+builds the extension, creates the GitHub release with generated release notes, attaches the extension and
+source archives, waits for approval from the `production` environment, and then submits the release to
+Chrome Web Store and Firefox Add-ons separately.
 
 ## GitHub environment
 
@@ -33,9 +34,9 @@ No Google service account key or OAuth refresh token is stored in GitHub.
 ## Publishing
 
 1. Update the version with `npm version patch`, `npm version minor`, or `npm version major`.
-2. Push the version commit and tag.
-3. Create and publish the corresponding GitHub release.
-4. Review the build and approve the `production` deployment.
+2. Push the version commit and tag with `git push --follow-tags`.
+3. Review the build and approve the `production` deployment.
 
-Publishing submits both extensions for store review. A successful workflow means submission succeeded, not
-that either store has completed its review.
+The tag push automatically creates the corresponding GitHub release. Publishing submits both extensions for
+store review. A successful workflow means submission succeeded, not that either store has completed its
+review.

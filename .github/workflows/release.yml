@@ -1,12 +1,13 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing GitHub release tag to publish
+        description: Existing version tag to release
         required: true
         type: string
 
@@ -14,11 +15,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.event.release.tag_name || inputs.tag }}
+  group: release-${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
   cancel-in-progress: false
 
 env:
-  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
 
 jobs:
   build:
@@ -83,14 +84,18 @@ jobs:
             ${{ steps.release.outputs.source_name }}
           if-no-files-found: error
 
-      - name: Attach packages to GitHub release
+      - name: Create GitHub release and attach packages
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release upload "$RELEASE_TAG"
-          "${{ steps.release.outputs.package_name }}"
-          "${{ steps.release.outputs.source_name }}"
-          --clobber
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG"
+          fi
+
+          gh release upload "$RELEASE_TAG" \
+            "${{ steps.release.outputs.package_name }}" \
+            "${{ steps.release.outputs.source_name }}" \
+            --clobber
 
   publish-chrome:
     name: Publish to Chrome Web Store
