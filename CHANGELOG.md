@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 6.2.1 (2026-09-04)
+
+- Try common image extensions when previewing extensionless meee.com.tw links
+
 ## 6.2.0 (2026-08-20)
 
 - Add floating image previews when Easy Reading is disabled and Picture Preview is enabled
