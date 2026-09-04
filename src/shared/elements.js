@@ -1,4 +1,5 @@
-export function createImageEl(src, { classes = [], loading } = {}) {
+export function createImageEl(sources, { classes = [], loading, onLoadFailure } = {}) {
+  const [src, ...remainingSrcs] = typeof sources === 'string' ? [sources] : sources;
   const imgEl = document.createElement('img');
   imgEl.classList.add(...classes);
   if (!src.startsWith('https://i.verb.tw/')) {
@@ -7,6 +8,14 @@ export function createImageEl(src, { classes = [], loading } = {}) {
   if (loading) {
     imgEl.loading = loading;
   }
+  imgEl.addEventListener('error', (event) => {
+    const fallbackSrc = remainingSrcs.shift();
+    if (fallbackSrc) {
+      imgEl.src = fallbackSrc;
+      return;
+    }
+    onLoadFailure?.(event);
+  });
   imgEl.src = src;
   return imgEl;
 }

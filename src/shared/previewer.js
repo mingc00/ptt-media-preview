@@ -2,8 +2,8 @@ import { createImageEl } from './elements.js';
 
 const PREVIEW_MARGIN = 20;
 
-export function createImageLinkPreviewer(container, { isEnabled, resolveSrc }) {
-  const sourceCache = new WeakMap();
+export function createImageLinkPreviewer(container, { isEnabled, resolveSources }) {
+  const sourcesCache = new WeakMap();
   const imageCache = new WeakMap();
   const nativePreviewBlocker = document.createElement('style');
   container.dataset.pttMediaPreviewContainer = '';
@@ -62,15 +62,15 @@ export function createImageLinkPreviewer(container, { isEnabled, resolveSrc }) {
     });
   }
 
-  function getSource(anchor) {
-    const cached = sourceCache.get(anchor);
+  function getSources(anchor) {
+    const cached = sourcesCache.get(anchor);
     if (cached?.href === anchor.href) {
-      return cached.source;
+      return cached.sources;
     }
 
-    const source = Promise.resolve(resolveSrc(anchor));
-    sourceCache.set(anchor, { href: anchor.href, source });
-    return source;
+    const sources = Promise.resolve(resolveSources(anchor));
+    sourcesCache.set(anchor, { href: anchor.href, sources });
+    return sources;
   }
 
   function canShow(anchor, currentRequestId) {
@@ -86,14 +86,24 @@ export function createImageLinkPreviewer(container, { isEnabled, resolveSrc }) {
 
     const currentRequestId = ++requestId;
     activeAnchor = anchor;
-    const src = await getSource(anchor);
-    if (!src || !canShow(anchor, currentRequestId)) {
+    const sources = await getSources(anchor);
+    if (!sources?.length || !canShow(anchor, currentRequestId)) {
       return;
     }
 
-    let image = imageCache.get(anchor);
-    if (!image || image.src !== src) {
-      image = createImageEl(src);
+    const cachedImage = imageCache.get(anchor);
+    let image = cachedImage?.image;
+    if (!image || cachedImage.sources !== sources) {
+      image = createImageEl(sources, {
+        onLoadFailure() {
+          if (imageCache.get(anchor)?.image === image) {
+            imageCache.delete(anchor);
+          }
+          if (activeImage === image) {
+            hide();
+          }
+        },
+      });
       image.alt = '';
       image.dataset.pttMediaPreviewFallback = '';
       Object.assign(image.style, {
@@ -104,14 +114,8 @@ export function createImageLinkPreviewer(container, { isEnabled, resolveSrc }) {
         position: 'absolute',
         zIndex: '2',
       });
-      imageCache.set(anchor, image);
+      imageCache.set(anchor, { image, sources });
       image.addEventListener('load', scheduleRender);
-      image.addEventListener('error', () => {
-        imageCache.delete(anchor);
-        if (activeImage === image) {
-          hide();
-        }
-      });
     }
 
     activeImage = image;

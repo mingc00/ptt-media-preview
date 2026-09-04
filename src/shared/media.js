@@ -20,7 +20,7 @@ export function classifyMediaUrl(rawUrl) {
     }
 
     if (imagePathRe.test(url.pathname)) {
-      return { kind: 'image', src: url.href };
+      return { kind: 'image', sources: url.href };
     }
 
     const hashMatch = url.pathname.match(/^\/(\w+)$/);
@@ -30,17 +30,21 @@ export function classifyMediaUrl(rawUrl) {
   }
 
   if (imagePathRe.test(url.pathname)) {
-    return { kind: 'image', src: url.href };
+    return { kind: 'image', sources: url.href };
   }
 
   if (url.hostname === 'pbs.twimg.com' && url.pathname.startsWith('/media/')) {
-    return { kind: 'image', src: url.href };
+    return { kind: 'image', sources: url.href };
   }
 
   if (url.protocol === 'https:' && url.hostname === 'meee.com.tw' && /^\/\w+$/.test(url.pathname)) {
     url.hostname = `i.${url.hostname}`;
-    url.pathname += '.jpg';
-    return { kind: 'image', src: url.href };
+    const basePath = url.pathname;
+    const sources = ['jpg', 'png', 'gif', 'jpeg'].map((extension) => {
+      url.pathname = `${basePath}.${extension}`;
+      return url.href;
+    });
+    return { kind: 'image', sources };
   }
 
   if (url.protocol === 'https:' && url.hostname === 'youtu.be') {

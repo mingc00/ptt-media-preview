@@ -69,13 +69,14 @@ new MutationObserver((records) => {
     }
     linkPreviewer = createImageLinkPreviewer(mainContainer, {
       isEnabled: isLinkPreviewEnabled,
-      async resolveSrc(anchor) {
+      async resolveSources(anchor) {
         const media = classifyMediaUrl(anchor.href);
         if (media?.kind === 'image') {
-          return media.src;
+          return media.sources;
         }
         if (media?.kind === 'imgur-album') {
-          return (await resolveAlbum(media.hash))[0];
+          const src = (await resolveAlbum(media.hash))[0];
+          return src;
         }
         if (media?.kind === 'imgur-unknown') {
           const { type, link } = await resolveUnknown(media.hash);
@@ -87,8 +88,8 @@ new MutationObserver((records) => {
   }
   syncLinkPreviewer();
 
-  function createImage(url) {
-    return createImageEl(url, {
+  function createImage(sources) {
+    return createImageEl(sources, {
       classes: ['easyReadingImg', 'hyperLinkPreview'],
     });
   }
@@ -205,7 +206,7 @@ new MutationObserver((records) => {
       imageAnchors.forEach(([a, media]) => {
         const div = getPreviewContainer(a);
         if (div) {
-          div.appendChild(createImage(media.src));
+          div.appendChild(createImage(media.sources));
         }
       });
 

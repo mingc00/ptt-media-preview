@@ -18,8 +18,8 @@ function insertPreview(anchor, el) {
   anchor.parentNode.insertBefore(div, anchor.nextSibling);
 }
 
-function createLazyImageEl(src) {
-  return createImageEl(src, { loading: 'lazy' });
+function createLazyImageEl(sources) {
+  return createImageEl(sources, { loading: 'lazy' });
 }
 
 function fixBrokenPreview(anchor) {
@@ -70,7 +70,7 @@ for (const a of document.querySelectorAll('a[href^="https://meee.com.tw/"]')) {
   if (media?.kind !== 'image') {
     continue;
   }
-  insertPreview(a, createLazyImageEl(media.src));
+  insertPreview(a, createLazyImageEl(media.sources));
 }
 
 for (const a of document.querySelectorAll('a[href^="https://clips.twitch.tv"]')) {
@@ -93,7 +93,7 @@ for (const a of document.querySelectorAll(
 )) {
   const media = classifyMediaUrl(a.href);
   if (media?.kind === 'image') {
-    insertPreview(a, createLazyImageEl(media.src));
+    insertPreview(a, createLazyImageEl(media.sources));
   }
 }
 
