@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 7.0.0 (2026-09-14)
+
+- Support the redesigned Term client with Canvas rendering and a separate Easy Reading overlay
+- Read the new media preview setting and detect changes to dialogs, reading mode, and screen containers
+- Add per-link Easy Reading previews while preserving native images and handling albums without clearing other previews
+- Prevent duplicate hover previews and discard stale results when links or articles change
+- Render Imgur GIF previews as videos when handled by the extension
+- Add DOM regression tests and separate formatting, lint, test, and build steps in CI and releases
+
 ## 6.2.1 (2026-09-04)
 
 - Try common image extensions when previewing extensionless meee.com.tw links
