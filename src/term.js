@@ -1,8 +1,8 @@
-import { createIframeEl, createImageEl, createVideoEl } from './shared/elements.js';
+import { createIframeEl, createImgurGifEl, createPreviewEl } from './shared/elements.js';
 import { getTwitchEmbedUrl, getYoutubeEmbedUrl } from './shared/embed.js';
 import { resolveAlbum, resolveUnknown } from './shared/imgur.js';
 import { classifyMediaUrl } from './shared/media.js';
-import { createImageLinkPreviewer } from './shared/previewer.js';
+import { createMediaLinkPreviewer } from './shared/previewer.js';
 
 function getConfig() {
   const raw = localStorage['pttchrome.pref.v1'];
@@ -67,20 +67,19 @@ new MutationObserver((records) => {
     if (!isLinkPreviewEnabled()) {
       return;
     }
-    linkPreviewer = createImageLinkPreviewer(mainContainer, {
+    linkPreviewer = createMediaLinkPreviewer(mainContainer, {
       isEnabled: isLinkPreviewEnabled,
-      async resolveSources(anchor) {
+      async resolveMedia(anchor) {
         const media = classifyMediaUrl(anchor.href);
-        if (media?.kind === 'image') {
-          return media.sources;
+        if (media?.kind === 'image' || media?.kind === 'imgur-gif') {
+          return media;
         }
         if (media?.kind === 'imgur-album') {
-          const src = (await resolveAlbum(media.hash))[0];
-          return src;
+          return classifyMediaUrl((await resolveAlbum(media.hash))[0]);
         }
         if (media?.kind === 'imgur-unknown') {
           const { type, link } = await resolveUnknown(media.hash);
-          return type.startsWith('image/') ? link : null;
+          return type.startsWith('image/') ? classifyMediaUrl(link) : null;
         }
         return null;
       },
@@ -88,18 +87,9 @@ new MutationObserver((records) => {
   }
   syncLinkPreviewer();
 
-  function createImage(sources) {
-    return createImageEl(sources, {
+  function createEasyReadingPreview(media) {
+    return createPreviewEl(media, {
       classes: ['easyReadingImg', 'hyperLinkPreview'],
-    });
-  }
-
-  function createImgurGif(url) {
-    return createVideoEl(url.replace(/\.gif$/, '.mp4'), {
-      autoplay: true,
-      classes: ['easyReadingImg', 'hyperLinkPreview'],
-      controls: false,
-      loop: true,
     });
   }
 
@@ -176,8 +166,8 @@ new MutationObserver((records) => {
     const as = getNewElements(pendingAnchors);
     pendingAnchors.clear();
     const mediaAnchors = as.map((a) => [a, classifyMediaUrl(a.href)]).filter(([, media]) => media);
-    const imageAnchors = mediaAnchors
-      .filter(([, media]) => media.kind === 'image')
+    const previewAnchors = mediaAnchors
+      .filter(([, media]) => media.kind === 'image' || media.kind === 'imgur-gif')
       .filter(([a]) => {
         const container = getPreviewContainer(a);
         return container && !container.firstChild;
@@ -192,7 +182,7 @@ new MutationObserver((records) => {
     const twitchAnchors = mediaAnchors.filter(([, media]) => media.kind === 'twitch');
 
     if (
-      imageAnchors.length === 0 &&
+      previewAnchors.length === 0 &&
       albumAnchors.length === 0 &&
       videoImgs.length === 0 &&
       ytAnchors.length === 0 &&
@@ -203,10 +193,10 @@ new MutationObserver((records) => {
 
     observer.disconnect();
     try {
-      imageAnchors.forEach(([a, media]) => {
+      previewAnchors.forEach(([a, media]) => {
         const div = getPreviewContainer(a);
         if (div) {
-          div.appendChild(createImage(media.sources));
+          div.appendChild(createEasyReadingPreview(media));
         }
       });
 
@@ -221,13 +211,17 @@ new MutationObserver((records) => {
         const links = await resolveAlbum(media.hash);
         const fragment = document.createDocumentFragment();
         for (const link of links) {
-          fragment.appendChild(link.endsWith('.gif') ? createImgurGif(link) : createImage(link));
+          const media = classifyMediaUrl(link);
+          const preview = createEasyReadingPreview(media);
+          if (preview) {
+            fragment.appendChild(preview);
+          }
         }
         div.appendChild(fragment);
       });
 
       videoImgs.forEach((img) => {
-        const videoEl = createVideoEl(img.src, {
+        const videoEl = createImgurGifEl(img.src, {
           classes: ['easyReadingImg', 'hyperLinkPreview'],
         });
         img.parentNode?.replaceChild(videoEl, img);

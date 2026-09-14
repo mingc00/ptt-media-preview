@@ -22,15 +22,46 @@ export function createImageEl(sources, { classes = [], loading, onLoadFailure } 
 
 export function createVideoEl(
   src,
-  { autoplay = false, classes = [], controls = true, loop = false } = {},
+  {
+    autoplay = false,
+    classes = [],
+    controls = true,
+    loop = false,
+    muted = false,
+    playsInline = false,
+  } = {},
 ) {
   const videoEl = document.createElement('video');
   videoEl.classList.add(...classes);
-  videoEl.src = src;
   videoEl.autoplay = autoplay;
   videoEl.controls = controls;
   videoEl.loop = loop;
+  videoEl.muted = muted;
+  videoEl.defaultMuted = muted;
+  videoEl.playsInline = playsInline;
+  videoEl.src = src;
   return videoEl;
+}
+
+export function createImgurGifEl(src, { classes = [] } = {}) {
+  return createVideoEl(src, {
+    autoplay: true,
+    classes,
+    controls: false,
+    loop: true,
+    muted: true,
+    playsInline: true,
+  });
+}
+
+export function createPreviewEl(media, options) {
+  if (media?.kind === 'image') {
+    return createImageEl(media.sources, options);
+  }
+  if (media?.kind === 'imgur-gif') {
+    return createImgurGifEl(media.src, options);
+  }
+  return null;
 }
 
 export function createIframeEl(src, { classes = [], referrerPolicy } = {}) {

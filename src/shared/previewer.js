@@ -1,10 +1,10 @@
-import { createImageEl } from './elements.js';
+import { createPreviewEl } from './elements.js';
 
 const PREVIEW_MARGIN = 20;
 
-export function createImageLinkPreviewer(container, { isEnabled, resolveSources }) {
-  const sourcesCache = new WeakMap();
-  const imageCache = new WeakMap();
+export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia }) {
+  const mediaCache = new WeakMap();
+  const elementCache = new WeakMap();
   const nativePreviewBlocker = document.createElement('style');
   container.dataset.pttMediaPreviewContainer = '';
   nativePreviewBlocker.textContent = `
@@ -15,7 +15,7 @@ export function createImageLinkPreviewer(container, { isEnabled, resolveSources 
   document.head.appendChild(nativePreviewBlocker);
 
   let activeAnchor = null;
-  let activeImage = null;
+  let activeElement = null;
   let requestId = 0;
   let renderFrame = null;
   let clientX = -1;
@@ -24,31 +24,31 @@ export function createImageLinkPreviewer(container, { isEnabled, resolveSources 
   function hide() {
     requestId += 1;
     activeAnchor = null;
-    activeImage?.remove();
-    activeImage = null;
+    activeElement?.remove();
+    activeElement = null;
   }
 
   function render() {
-    const image = activeImage;
-    if (!image?.isConnected) {
+    const element = activeElement;
+    if (!element?.isConnected) {
       return;
     }
 
     // Position from the rendered rectangle rather than intrinsic image dimensions.
     // A second pass accounts for viewport changes when scrollbars disappear.
     for (let pass = 0; pass < 2; pass += 1) {
-      const rect = image.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
       const viewportWidth = document.documentElement.clientWidth;
       const viewportHeight = document.documentElement.clientHeight;
       const maxLeft = Math.max(PREVIEW_MARGIN, viewportWidth - PREVIEW_MARGIN - rect.width);
       const maxTop = Math.max(PREVIEW_MARGIN, viewportHeight - PREVIEW_MARGIN - rect.height);
       const targetLeft = Math.min(Math.max(PREVIEW_MARGIN, clientX + PREVIEW_MARGIN), maxLeft);
       const targetTop = Math.min(Math.max(PREVIEW_MARGIN, clientY - rect.height / 2), maxTop);
-      const scaleX = image.offsetWidth ? rect.width / image.offsetWidth : 1;
-      const scaleY = image.offsetHeight ? rect.height / image.offsetHeight : 1;
+      const scaleX = element.offsetWidth ? rect.width / element.offsetWidth : 1;
+      const scaleY = element.offsetHeight ? rect.height / element.offsetHeight : 1;
 
-      image.style.left = `${image.offsetLeft + (targetLeft - rect.left) / scaleX}px`;
-      image.style.top = `${image.offsetTop + (targetTop - rect.top) / scaleY}px`;
+      element.style.left = `${element.offsetLeft + (targetLeft - rect.left) / scaleX}px`;
+      element.style.top = `${element.offsetTop + (targetTop - rect.top) / scaleY}px`;
     }
   }
 
@@ -62,15 +62,15 @@ export function createImageLinkPreviewer(container, { isEnabled, resolveSources 
     });
   }
 
-  function getSources(anchor) {
-    const cached = sourcesCache.get(anchor);
+  function getMedia(anchor) {
+    const cached = mediaCache.get(anchor);
     if (cached?.href === anchor.href) {
-      return cached.sources;
+      return cached.media;
     }
 
-    const sources = Promise.resolve(resolveSources(anchor));
-    sourcesCache.set(anchor, { href: anchor.href, sources });
-    return sources;
+    const media = Promise.resolve(resolveMedia(anchor));
+    mediaCache.set(anchor, { href: anchor.href, media });
+    return media;
   }
 
   function canShow(anchor, currentRequestId) {
@@ -86,27 +86,32 @@ export function createImageLinkPreviewer(container, { isEnabled, resolveSources 
 
     const currentRequestId = ++requestId;
     activeAnchor = anchor;
-    const sources = await getSources(anchor);
-    if (!sources?.length || !canShow(anchor, currentRequestId)) {
+    const media = await getMedia(anchor);
+    if (!media || !canShow(anchor, currentRequestId)) {
       return;
     }
 
-    const cachedImage = imageCache.get(anchor);
-    let image = cachedImage?.image;
-    if (!image || cachedImage.sources !== sources) {
-      image = createImageEl(sources, {
+    const cachedElement = elementCache.get(anchor);
+    let element = cachedElement?.element;
+    if (!element || cachedElement.media !== media) {
+      element = createPreviewEl(media, {
         onLoadFailure() {
-          if (imageCache.get(anchor)?.image === image) {
-            imageCache.delete(anchor);
+          if (elementCache.get(anchor)?.element === element) {
+            elementCache.delete(anchor);
           }
-          if (activeImage === image) {
+          if (activeElement === element) {
             hide();
           }
         },
       });
-      image.alt = '';
-      image.dataset.pttMediaPreviewFallback = '';
-      Object.assign(image.style, {
+      if (!element) {
+        return;
+      }
+      if (element instanceof HTMLImageElement) {
+        element.alt = '';
+      }
+      element.dataset.pttMediaPreviewFallback = '';
+      Object.assign(element.style, {
         display: 'block',
         maxHeight: '80%',
         maxWidth: '90%',
@@ -114,12 +119,28 @@ export function createImageLinkPreviewer(container, { isEnabled, resolveSources 
         position: 'absolute',
         zIndex: '2',
       });
-      imageCache.set(anchor, { image, sources });
-      image.addEventListener('load', scheduleRender);
+      elementCache.set(anchor, { element, media });
+      element.addEventListener(
+        element instanceof HTMLVideoElement ? 'loadedmetadata' : 'load',
+        scheduleRender,
+      );
+      if (element instanceof HTMLVideoElement) {
+        element.addEventListener('error', () => {
+          if (elementCache.get(anchor)?.element === element) {
+            elementCache.delete(anchor);
+          }
+          if (activeElement === element) {
+            hide();
+          }
+        });
+      }
     }
 
-    activeImage = image;
-    container.appendChild(image);
+    activeElement = element;
+    container.appendChild(element);
+    if (element instanceof HTMLVideoElement) {
+      element.play().catch(() => {});
+    }
     render();
   }
 

@@ -1,4 +1,5 @@
 const imagePathRe = /\.(?:png|jpe?g|gif|webp)$/i;
+const imgurGifPathRe = /\.(?:gif|gifv)$/i;
 const imgurHostRe = /^(?:[mi]\.)?imgur\.com$/i;
 
 export function classifyMediaUrl(rawUrl) {
@@ -17,6 +18,11 @@ export function classifyMediaUrl(rawUrl) {
     const albumMatch = url.pathname.match(/^\/(?:a|gallery)\/(\w+)/);
     if (albumMatch) {
       return { kind: 'imgur-album', hash: albumMatch[1] };
+    }
+
+    if (imgurGifPathRe.test(url.pathname)) {
+      url.pathname = url.pathname.replace(imgurGifPathRe, '.mp4');
+      return { kind: 'imgur-gif', src: url.href };
     }
 
     if (imagePathRe.test(url.pathname)) {

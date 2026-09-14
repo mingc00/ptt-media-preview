@@ -1,4 +1,10 @@
-import { createIframeEl, createImageEl, createVideoEl } from './shared/elements.js';
+import {
+  createIframeEl,
+  createImageEl,
+  createImgurGifEl,
+  createPreviewEl,
+  createVideoEl,
+} from './shared/elements.js';
 import { getTwitchEmbedUrl, getYoutubeEmbedUrl } from './shared/embed.js';
 import { resolveAlbum, resolveUnknown } from './shared/imgur.js';
 import { classifyMediaUrl } from './shared/media.js';
@@ -22,13 +28,17 @@ function createLazyImageEl(sources) {
   return createImageEl(sources, { loading: 'lazy' });
 }
 
-function fixBrokenPreview(anchor) {
+function fixBrokenImagePreview(anchor) {
   const next = anchor.nextElementSibling;
   if (next?.classList.contains('richcontent')) {
     next.firstChild.src = anchor.href;
   } else {
     insertPreview(anchor, createLazyImageEl(anchor.href));
   }
+}
+
+function createImgurMediaEl(link) {
+  return createPreviewEl(classifyMediaUrl(link), { loading: 'lazy' });
 }
 
 const albums = [];
@@ -39,7 +49,15 @@ for (const a of links) {
   if (media?.kind === 'imgur-album') {
     albums.push([a, media.hash]);
   } else if (media?.kind === 'image') {
-    fixBrokenPreview(a);
+    fixBrokenImagePreview(a);
+  } else if (media?.kind === 'imgur-gif') {
+    const video = createImgurGifEl(media.src);
+    const next = a.nextElementSibling;
+    if (next?.classList.contains('richcontent')) {
+      next.replaceChildren(video);
+    } else {
+      insertPreview(a, video);
+    }
   } else if (media?.kind === 'imgur-unknown') {
     unknownHashes.push([a, media.hash]);
   }
@@ -48,14 +66,19 @@ for (const a of links) {
 albums.forEach(async ([a, hash]) => {
   const links = await resolveAlbum(hash);
   for (const link of links.reverse()) {
-    insertPreview(a, createLazyImageEl(link));
+    const preview = createImgurMediaEl(link);
+    if (preview) {
+      insertPreview(a, preview);
+    }
   }
 });
 
 unknownHashes.forEach(async ([a, hash]) => {
   const { type, link } = await resolveUnknown(hash);
   let el = null;
-  if (type.startsWith('video/')) {
+  if (type === 'image/gif') {
+    el = createImgurMediaEl(link);
+  } else if (type.startsWith('video/')) {
     el = createVideoEl(link);
   } else if (type.startsWith('image/')) {
     el = createLazyImageEl(link);
