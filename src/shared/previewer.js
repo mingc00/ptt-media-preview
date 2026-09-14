@@ -3,12 +3,15 @@ import { createPreviewEl } from './elements.js';
 const PREVIEW_MARGIN = 20;
 
 export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia }) {
+  const listeners = new AbortController();
+  let destroyed = false;
   const mediaCache = new WeakMap();
   const elementCache = new WeakMap();
   const nativePreviewBlocker = document.createElement('style');
   container.dataset.pttMediaPreviewContainer = '';
   nativePreviewBlocker.textContent = `
-    [data-ptt-media-preview-container] > img:not([data-ptt-media-preview-fallback]) {
+    [data-ptt-media-preview-container] > img:not([data-ptt-media-preview-fallback]),
+    [data-ptt-media-preview-container][data-ptt-media-preview-active] .image-preview-popup {
       display: none !important;
     }
   `;
@@ -25,6 +28,7 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
     requestId += 1;
     activeAnchor = null;
     activeElement?.remove();
+    delete container.dataset.pttMediaPreviewActive;
     activeElement = null;
   }
 
@@ -53,7 +57,7 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
   }
 
   function scheduleRender() {
-    if (renderFrame !== null) {
+    if (destroyed || renderFrame !== null) {
       return;
     }
     renderFrame = requestAnimationFrame(() => {
@@ -73,21 +77,34 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
     return media;
   }
 
-  function canShow(anchor, currentRequestId) {
+  function canShow(anchor, href, currentRequestId) {
     return (
-      currentRequestId === requestId && activeAnchor === anchor && anchor.isConnected && isEnabled()
+      !destroyed &&
+      currentRequestId === requestId &&
+      activeAnchor === anchor &&
+      anchor.href === href &&
+      container.contains(anchor) &&
+      isEnabled()
     );
   }
 
   async function show(anchor) {
-    if (!isEnabled()) {
+    if (destroyed || !isEnabled()) {
       return;
     }
 
+    hide();
+    const href = anchor.href;
     const currentRequestId = ++requestId;
     activeAnchor = anchor;
-    const media = await getMedia(anchor);
-    if (!media || !canShow(anchor, currentRequestId)) {
+    let media;
+    try {
+      media = await getMedia(anchor);
+    } catch {
+      mediaCache.delete(anchor);
+      return;
+    }
+    if (!media || !canShow(anchor, href, currentRequestId)) {
       return;
     }
 
@@ -137,6 +154,7 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
     }
 
     activeElement = element;
+    container.dataset.pttMediaPreviewActive = '';
     container.appendChild(element);
     if (element instanceof HTMLVideoElement) {
       element.play().catch(() => {});
@@ -152,26 +170,37 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
     return anchor && container.contains(anchor) ? anchor : null;
   }
 
-  container.addEventListener('mouseover', (event) => {
-    const anchor = getAnchor(event.target);
-    if (!anchor || (event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget))) {
-      return;
-    }
-    ({ clientX, clientY } = event);
-    show(anchor);
-  });
+  container.addEventListener(
+    'mouseover',
+    (event) => {
+      const anchor = getAnchor(event.target);
+      if (
+        !anchor ||
+        (event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget))
+      ) {
+        return;
+      }
+      ({ clientX, clientY } = event);
+      show(anchor);
+    },
+    { signal: listeners.signal },
+  );
 
-  container.addEventListener('mouseout', (event) => {
-    const anchor = getAnchor(event.target);
-    if (
-      !anchor ||
-      anchor !== activeAnchor ||
-      (event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget))
-    ) {
-      return;
-    }
-    hide();
-  });
+  container.addEventListener(
+    'mouseout',
+    (event) => {
+      const anchor = getAnchor(event.target);
+      if (
+        !anchor ||
+        anchor !== activeAnchor ||
+        (event.relatedTarget instanceof Node && anchor.contains(event.relatedTarget))
+      ) {
+        return;
+      }
+      hide();
+    },
+    { signal: listeners.signal },
+  );
 
   document.addEventListener(
     'mousemove',
@@ -179,16 +208,26 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
       ({ clientX, clientY } = event);
       scheduleRender();
     },
-    { passive: true },
+    { passive: true, signal: listeners.signal },
   );
 
-  window.addEventListener('blur', hide);
+  window.addEventListener('blur', hide, { signal: listeners.signal });
 
-  new MutationObserver(() => {
-    if (activeAnchor && !activeAnchor.isConnected) {
+  const observer = new MutationObserver((records) => {
+    if (
+      activeAnchor &&
+      (!container.contains(activeAnchor) ||
+        records.some((record) => record.type === 'attributes' && record.target === activeAnchor))
+    ) {
       hide();
     }
-  }).observe(container, { childList: true, subtree: true });
+  });
+  observer.observe(container, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['href'],
+  });
 
   function refresh() {
     nativePreviewBlocker.disabled = !isEnabled();
@@ -198,5 +237,15 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
   }
   refresh();
 
-  return { refresh };
+  function destroy() {
+    destroyed = true;
+    hide();
+    listeners.abort();
+    observer.disconnect();
+    if (renderFrame !== null) cancelAnimationFrame(renderFrame);
+    nativePreviewBlocker.remove();
+    delete container.dataset.pttMediaPreviewContainer;
+  }
+
+  return { refresh, destroy };
 }
