@@ -30,5 +30,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate and build package
-        run: node --run check
+      - name: Check formatting
+        run: node --run check:format
+
+      - name: Lint
+        run: node --run lint
+
+      - name: Test
+        run: node --run test
+
+      - name: Build package
+        run: node --run build:package
