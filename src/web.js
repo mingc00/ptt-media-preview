@@ -64,7 +64,10 @@ for (const a of links) {
 }
 
 albums.forEach(async ([a, hash]) => {
-  const links = await resolveAlbum(hash);
+  const links = await resolveAlbum(hash).catch((error) => {
+    console.error(error);
+    return [];
+  });
   for (const link of links.reverse()) {
     const preview = createImgurMediaEl(link);
     if (preview) {
@@ -74,7 +77,10 @@ albums.forEach(async ([a, hash]) => {
 });
 
 unknownHashes.forEach(async ([a, hash]) => {
-  const { type, link } = await resolveUnknown(hash);
+  const { type, link } = await resolveUnknown(hash).catch((error) => {
+    console.error(error);
+    return { type: 'unknown' };
+  });
   let el = null;
   if (type === 'image/gif') {
     el = createImgurMediaEl(link);

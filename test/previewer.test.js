@@ -28,11 +28,9 @@ test('hover previews ignore changed hrefs and clean up replaced screens', async 
   anchor.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
   complete({ kind: 'image', sources: anchor.href });
   await settle();
-  assert.ok(container.hasAttribute('data-ptt-media-preview-active'));
   assert.equal(container.querySelector('img').src, anchor.href);
   previewer.destroy();
   assert.equal(container.querySelector('img'), null);
-  assert.equal(document.querySelector('style'), null);
   anchor.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
   assert.equal(calls, 2);
   dom.window.close();

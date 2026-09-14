@@ -1,26 +1,8 @@
+import { usesNativeImage } from './native.js';
 import { createIframeEl, createPreviewEl } from '../shared/elements.js';
 import { getTwitchEmbedUrl, getYoutubeEmbedUrl } from '../shared/embed.js';
-import { classifyMediaUrl } from '../shared/media.js';
+import { classifyMediaUrl, classifyResolvedMedia } from '../shared/media.js';
 import { resolveAlbum, resolveUnknown } from '../shared/imgur.js';
-
-function imageKey(raw) {
-  try {
-    const url = new URL(raw);
-    if (/^(?:[im]\.)?imgur\.com$/i.test(url.hostname)) {
-      return `imgur:${url.pathname.match(/^\/(?:a\/|gallery\/)?(\w+)/)?.[1]}`;
-    }
-    return url.href.replace(/^http:/, 'https:');
-  } catch {
-    return raw;
-  }
-}
-
-function resolvedMedia(link) {
-  if (typeof link === 'string' && /^https?:\/\/i\.imgur\.com\/\w+\.mp4(?:[?#]|$)/i.test(link)) {
-    return { kind: 'imgur-gif', src: link };
-  }
-  return classifyMediaUrl(link);
-}
 
 function createEmbed(media) {
   const src =
@@ -44,52 +26,40 @@ export function createInlinePreviewer(
   let timer;
 
   function remove(entry) {
+    clearTimeout(entry.retryTimer);
     entry.element?.remove();
-    for (const [image, display] of entry.hidden) image.style.display = display;
-    entry.hidden.clear();
   }
 
-  function nativeImages(anchor) {
-    const line = anchor.closest('[data-type="termline"]');
-    const container = line?.nextElementSibling;
-    if (!container) return [];
-    return [...container.querySelectorAll('img')].filter(
-      (image) =>
-        !image.closest('[data-ptt-inline-preview]') &&
-        imageKey(image.src) === imageKey(anchor.href),
+  function isCurrent(anchor, entry) {
+    return (
+      !destroyed &&
+      isEnabled() &&
+      !usesNativeImage(anchor.href) &&
+      content.contains(anchor) &&
+      anchor.href === entry.href &&
+      entries.get(anchor) === entry &&
+      anchor.closest('[data-type="termline"]') === entry.line
     );
-  }
-
-  function hideNative(entry, images) {
-    for (const image of images) {
-      if (!entry.hidden.has(image)) entry.hidden.set(image, image.style.display);
-      if (image.style.display !== 'none') image.style.display = 'none';
-    }
   }
 
   async function render(anchor, entry, media) {
     try {
       let previews;
       if (media.kind === 'imgur-album') {
-        previews = (await getAlbum(media.hash)).map(resolvedMedia);
+        previews = (await getAlbum(media.hash)).map(classifyResolvedMedia);
       } else if (media.kind === 'imgur-unknown') {
         const result = await getUnknown(media.hash);
+        const resolved = classifyResolvedMedia(result.link);
+        // Single images belong to the native resolver, even while its request is pending.
         previews =
-          result.type?.startsWith('image/') || result.type?.startsWith('video/')
-            ? [resolvedMedia(result.link)]
+          (result.type?.startsWith('image/') || result.type?.startsWith('video/')) &&
+          resolved?.kind === 'imgur-gif'
+            ? [resolved]
             : [];
       } else {
         previews = [media];
       }
-      if (
-        destroyed ||
-        !isEnabled() ||
-        !content.contains(anchor) ||
-        anchor.href !== entry.href ||
-        entries.get(anchor) !== entry ||
-        anchor.closest('[data-type="termline"]') !== entry.line
-      )
-        return;
+      if (!isCurrent(anchor, entry)) return;
       const element = document.createElement('div');
       element.dataset.pttInlinePreview = '';
       for (const preview of previews) {
@@ -106,51 +76,39 @@ export function createInlinePreviewer(
       entry.element = element;
       // Keep extension children outside the native renderer's preview container.
       entry.line.parentElement.append(element);
-      hideNative(entry, nativeImages(anchor));
     } catch (error) {
-      console.error('Unable to resolve Term media preview', error);
+      if (destroyed || entries.get(anchor) !== entry) return;
+      if (++entry.failures < 3) {
+        entry.retryTimer = setTimeout(() => {
+          if (isCurrent(anchor, entry)) void render(anchor, entry, media);
+        }, 1000 * entry.failures);
+      } else {
+        console.error('Unable to resolve Term media preview', error);
+      }
     }
   }
 
   function refresh() {
     if (destroyed) return;
     for (const [anchor, entry] of entries) {
-      if (
-        !isEnabled() ||
-        !content.contains(anchor) ||
-        anchor.href !== entry.href ||
-        anchor.closest('[data-type="termline"]') !== entry.line ||
-        (entry.element && !entry.element.isConnected)
-      ) {
+      if (!isCurrent(anchor, entry) || (entry.element && !entry.element.isConnected)) {
         remove(entry);
         entries.delete(anchor);
       }
     }
     if (!isEnabled()) return;
     for (const anchor of content.querySelectorAll('[data-type="termline"] a[href]')) {
+      if (usesNativeImage(anchor.href)) continue;
       const existing = entries.get(anchor);
-      const images = nativeImages(anchor);
-      if (existing) {
-        if (existing.element) hideNative(existing, images);
-        continue;
-      }
+      if (existing) continue;
       const media = classifyMediaUrl(anchor.href);
       if (!media) continue;
-      // Preserve native images, including lazy images that have not failed.
-      // Album and extensionless Imgur URLs require our resolver: Term guesses .jpg.
-      if (
-        (media.kind === 'image' || media.kind === 'imgur-gif') &&
-        images.some(
-          (image) =>
-            !/\.mp4(?:[?#]|$)/i.test(image.src) && (!image.complete || image.naturalWidth > 0),
-        )
-      )
-        continue;
       const entry = {
         href: anchor.href,
         line: anchor.closest('[data-type="termline"]'),
-        hidden: new Map(),
         element: null,
+        failures: 0,
+        retryTimer: null,
       };
       entries.set(anchor, entry);
       void render(anchor, entry, media);
@@ -169,10 +127,8 @@ export function createInlinePreviewer(
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['href', 'src'],
+    attributeFilter: ['href'],
   });
-  content.addEventListener('load', schedule, true);
-  content.addEventListener('error', schedule, true);
   schedule();
   return {
     refresh: schedule,
@@ -180,8 +136,6 @@ export function createInlinePreviewer(
       destroyed = true;
       clearTimeout(timer);
       observer.disconnect();
-      content.removeEventListener('load', schedule, true);
-      content.removeEventListener('error', schedule, true);
       for (const entry of entries.values()) remove(entry);
       entries.clear();
     },

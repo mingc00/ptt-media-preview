@@ -25,6 +25,12 @@
     {
       "matches": ["https://term.ptt.cc/"],
       "js": ["dist/term.js"]
+    },
+    {
+      "matches": ["https://term.ptt.cc/"],
+      "js": ["dist/term-native.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
     }
   ],
   "declarative_net_request": {

@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## 7.1.0 (2026-09-14)
+
+### Breaking changes
+
+- Require a newer ptt-term with the native media plugin resolver API; older Term clients are no longer supported
+- Use native hover and Easy Reading UI for single images, removing extension fallback previews for older clients and failed native image loads
+- Bypass the native trusted-domain whitelist for extension-supported images while respecting the media preview enabled setting; links handled only by the original native resolver retain its whitelist behavior
+- Reload open Term tabs after updating to activate the native integration
+
+### Preview changes
+
+- Pass direct image URLs and Twitter/X image links to native previews without creating duplicate extension images
+- Resolve extensionless meee links by trying `.jpg`, `.png`, `.gif`, and `.jpeg` in order before passing the successful image to native previews
+- Resolve extensionless Imgur single-image links through the Imgur API and pass their actual image URLs to native previews
+- Share extensionless Imgur resolution between native previews and extension animation handling; reuse successful results for five minutes (up to 100 entries) and evict failures so subsequent requests can retry
+- Keep i.verb.tw images in the extension renderer so requests preserve the Term Referer without additional host access
+- Retain extension handling for Imgur albums and animations, plus YouTube and Twitch Clips embeds in Easy Reading
+- Render Imgur `.gif` and `.gifv` links as MP4 videos; Easy Reading also handles supported MP4 URLs returned by the Imgur API
+- Preserve unrelated native images when expanding albums, prevent duplicate hover previews, and discard stale results when links or articles change
+- Keep PTT Web preview behavior unchanged
+
 ## 7.0.0 (2026-09-14)
 
 - Support the redesigned Term client with Canvas rendering and a separate Easy Reading overlay

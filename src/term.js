@@ -1,8 +1,16 @@
+import { installImgurBridge } from './term/imgur-bridge.js';
+import { usesNativeImage } from './term/native.js';
 import { resolveAlbum, resolveUnknown } from './shared/imgur.js';
-import { classifyMediaUrl } from './shared/media.js';
+import {
+  classifyMediaUrl,
+  classifyResolvedMedia,
+  requiresDocumentReferrer,
+} from './shared/media.js';
 import { createMediaLinkPreviewer } from './shared/previewer.js';
 import { observeTermEnvironment } from './term/environment.js';
 import { createInlinePreviewer } from './term/inline.js';
+
+installImgurBridge();
 
 let state;
 let main;
@@ -18,15 +26,21 @@ observeTermEnvironment((next) => {
     hoverPreviewer = main
       ? createMediaLinkPreviewer(main, {
           isEnabled: () => state.mediaEnabled && !state.reading,
+          isEligible: (anchor) => !usesNativeImage(anchor.href),
           async resolveMedia(anchor) {
             const media = classifyMediaUrl(anchor.href);
-            if (media?.kind === 'image' || media?.kind === 'imgur-gif') return media;
+            if (media?.kind === 'image' && requiresDocumentReferrer(anchor.href)) return media;
+            if (media?.kind === 'imgur-gif') return media;
             if (media?.kind === 'imgur-album') {
-              return classifyMediaUrl((await resolveAlbum(media.hash))[0]);
+              return classifyResolvedMedia((await resolveAlbum(media.hash))[0]);
             }
             if (media?.kind === 'imgur-unknown') {
               const { type, link } = await resolveUnknown(media.hash);
-              return type?.startsWith('image/') ? classifyMediaUrl(link) : null;
+              const resolved = classifyResolvedMedia(link);
+              return (type?.startsWith('image/') || type?.startsWith('video/')) &&
+                resolved?.kind === 'imgur-gif'
+                ? resolved
+                : null;
             }
             return null;
           },

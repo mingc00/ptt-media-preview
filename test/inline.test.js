@@ -30,14 +30,23 @@ test('same-row links get separate previews without removing native images', asyn
   const native = f.content.querySelector('img');
   Object.defineProperty(native, 'naturalWidth', { value: 100 });
   await settle();
-  assert.equal(f.content.querySelectorAll('[data-ptt-inline-preview]').length, 2);
+  assert.equal(f.content.querySelectorAll('[data-ptt-inline-preview]').length, 1);
   assert.equal(f.content.querySelectorAll('iframe').length, 1);
   assert.ok(native.isConnected);
   assert.notEqual(native.style.display, 'none');
   f.close();
 });
 
-test('album only hides its own native placeholder, including late native renders', async () => {
+test('verb images use the extension renderer and preserve the document referrer', async () => {
+  const f = fixture(row(['https://i.verb.tw/7pXQLxfu.jpg']));
+  await settle();
+  const image = f.content.querySelector('[data-ptt-inline-preview] img');
+  assert.equal(image.src, 'https://i.verb.tw/7pXQLxfu.jpg');
+  assert.equal(image.hasAttribute('referrerpolicy'), false);
+  f.close();
+});
+
+test('album previews leave existing images untouched', async () => {
   const f = fixture(
     row(
       ['https://imgur.com/a/album', 'https://i.imgur.com/kept.jpg'],
@@ -55,7 +64,7 @@ test('album only hides its own native placeholder, including late native renders
   placeholder.src = 'https://i.imgur.com/album.jpg';
   kept.parentElement.append(placeholder);
   await settle();
-  assert.equal(placeholder.style.display, 'none');
+  assert.equal(placeholder.style.display, '');
   assert.notEqual(kept.style.display, 'none');
   f.previewer.destroy();
   assert.equal(placeholder.style.display, '');
@@ -75,8 +84,7 @@ test('removed articles and reused anchors cannot receive stale album results', a
   anchor.href = 'https://i.imgur.com/new.jpg';
   finish(['https://i.imgur.com/stale.jpg']);
   await settle();
-  assert.equal(f.content.querySelectorAll('img').length, 1);
-  assert.equal(f.content.querySelector('img').src, anchor.href);
+  assert.equal(f.content.querySelectorAll('img').length, 0);
   f.content.innerHTML = row(['https://imgur.com/a/another']);
   await settle();
   f.content.replaceChildren();
@@ -86,7 +94,7 @@ test('removed articles and reused anchors cannot receive stale album results', a
   f.close();
 });
 
-test('failed native images get a fallback, and disabling removes owned previews', async () => {
+test('failed native images remain owned by native preview', async () => {
   let enabled = true;
   const f = fixture(
     row(['https://i.imgur.com/fail.jpg'], '<img src="https://i.imgur.com/fail.jpg">'),
@@ -96,8 +104,8 @@ test('failed native images get a fallback, and disabling removes owned previews'
   Object.defineProperties(native, { complete: { value: true }, naturalWidth: { value: 0 } });
   native.dispatchEvent(new window.Event('error'));
   await settle();
-  assert.equal(f.content.querySelectorAll('[data-ptt-inline-preview]').length, 1);
-  assert.equal(native.style.display, 'none');
+  assert.equal(f.content.querySelectorAll('[data-ptt-inline-preview]').length, 0);
+  assert.equal(native.style.display, '');
   enabled = false;
   f.previewer.refresh();
   await settle();
@@ -106,19 +114,19 @@ test('failed native images get a fallback, and disabling removes owned previews'
   f.close();
 });
 
-test('late successful native images are not duplicated by an existing fallback', async () => {
+test('late native images are not duplicated or hidden', async () => {
   const f = fixture(row(['https://i.imgur.com/photo.jpg']));
   await settle();
   const native = document.createElement('img');
   native.src = 'https://i.imgur.com/photo.jpg';
   f.content.querySelector('[data-type="termline"]').nextElementSibling.append(native);
   await settle();
-  assert.equal(f.content.querySelectorAll('[data-ptt-inline-preview]').length, 1);
-  assert.equal(native.style.display, 'none');
+  assert.equal(f.content.querySelectorAll('[data-ptt-inline-preview]').length, 0);
+  assert.equal(native.style.display, '');
   f.close();
 });
 
-test('extensionless images and album MP4s resolve into owned media once', async () => {
+test('extensionless single images stay native while album MP4s retain extension previews', async () => {
   let calls = 0;
   const f = fixture(row(['https://imgur.com/unknown', 'https://imgur.com/a/videos']), {
     getUnknown: async () => {
@@ -128,14 +136,60 @@ test('extensionless images and album MP4s resolve into owned media once', async 
     getAlbum: async () => ['https://i.imgur.com/clip.mp4'],
   });
   await settle();
-  assert.equal(
-    f.content.querySelector('[data-ptt-inline-preview] img').src,
-    'https://i.imgur.com/actual.png',
-  );
+  assert.equal(f.content.querySelector('[data-ptt-inline-preview] img'), null);
   assert.equal(f.content.querySelector('video').src, 'https://i.imgur.com/clip.mp4');
   f.previewer.refresh();
   await settle();
   assert.equal(calls, 1);
-  assert.equal(f.content.querySelectorAll('[data-ptt-inline-preview]').length, 2);
+  assert.equal(f.content.querySelectorAll('[data-ptt-inline-preview]').length, 1);
   f.close();
+});
+
+test('temporary resolution failures retry and recover without a DOM change', async () => {
+  let calls = 0;
+  const f = fixture(row(['https://imgur.com/a/retry']), {
+    getAlbum: async () => {
+      if (++calls === 1) throw new Error('temporary');
+      return ['https://i.imgur.com/recovered.jpg'];
+    },
+  });
+  await settle();
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  assert.equal(calls, 2);
+  assert.equal(f.content.querySelector('img').src, 'https://i.imgur.com/recovered.jpg');
+  f.close();
+});
+
+test('resolution retries stop after three attempts and unsupported results do not retry', async () => {
+  let calls = 0;
+  const originalError = console.error;
+  console.error = () => {};
+  const f = fixture(row(['https://imgur.com/a/fail']), {
+    getAlbum: async () => {
+      calls++;
+      throw new Error('offline');
+    },
+  });
+  try {
+    await settle();
+    f.previewer.refresh();
+    await settle();
+    await new Promise((resolve) => setTimeout(resolve, 3100));
+    assert.equal(calls, 3);
+  } finally {
+    f.close();
+    console.error = originalError;
+  }
+  let emptyCalls = 0;
+  const empty = fixture(row(['https://imgur.com/a/empty']), {
+    getAlbum: async () => {
+      emptyCalls++;
+      return [];
+    },
+  });
+  await settle();
+  empty.previewer.refresh();
+  await settle();
+  assert.equal(emptyCalls, 1);
+  empty.close();
 });

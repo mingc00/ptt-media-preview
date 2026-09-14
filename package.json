@@ -5,7 +5,7 @@
   "description": "Enhanced Ptt link preview experience",
   "scripts": {
     "build": "node --run build:content",
-    "build:content": "vite build --mode web && vite build --mode term",
+    "build:content": "vite build --mode web && vite build --mode term && vite build --mode term-native",
     "build:package": "node --run build:content && node scripts/package.mjs",
     "check": "node --run check:format && node --run lint && node --run test && node --run build:package",
     "check:format": "oxfmt --check",

@@ -2,20 +2,14 @@ import { createPreviewEl } from './elements.js';
 
 const PREVIEW_MARGIN = 20;
 
-export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia }) {
+export function createMediaLinkPreviewer(
+  container,
+  { isEnabled, resolveMedia, isEligible = () => true },
+) {
   const listeners = new AbortController();
   let destroyed = false;
   const mediaCache = new WeakMap();
   const elementCache = new WeakMap();
-  const nativePreviewBlocker = document.createElement('style');
-  container.dataset.pttMediaPreviewContainer = '';
-  nativePreviewBlocker.textContent = `
-    [data-ptt-media-preview-container] > img:not([data-ptt-media-preview-fallback]),
-    [data-ptt-media-preview-container][data-ptt-media-preview-active] .image-preview-popup {
-      display: none !important;
-    }
-  `;
-  document.head.appendChild(nativePreviewBlocker);
 
   let activeAnchor = null;
   let activeElement = null;
@@ -28,7 +22,6 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
     requestId += 1;
     activeAnchor = null;
     activeElement?.remove();
-    delete container.dataset.pttMediaPreviewActive;
     activeElement = null;
   }
 
@@ -57,7 +50,7 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
   }
 
   function scheduleRender() {
-    if (destroyed || renderFrame !== null) {
+    if (destroyed || !activeElement || renderFrame !== null) {
       return;
     }
     renderFrame = requestAnimationFrame(() => {
@@ -84,12 +77,13 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
       activeAnchor === anchor &&
       anchor.href === href &&
       container.contains(anchor) &&
-      isEnabled()
+      isEnabled() &&
+      isEligible(anchor)
     );
   }
 
   async function show(anchor) {
-    if (destroyed || !isEnabled()) {
+    if (destroyed || !isEnabled() || !isEligible(anchor)) {
       return;
     }
 
@@ -154,7 +148,6 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
     }
 
     activeElement = element;
-    container.dataset.pttMediaPreviewActive = '';
     container.appendChild(element);
     if (element instanceof HTMLVideoElement) {
       element.play().catch(() => {});
@@ -230,10 +223,7 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
   });
 
   function refresh() {
-    nativePreviewBlocker.disabled = !isEnabled();
-    if (!isEnabled()) {
-      hide();
-    }
+    if (!isEnabled() || (activeAnchor && !isEligible(activeAnchor))) hide();
   }
   refresh();
 
@@ -243,8 +233,6 @@ export function createMediaLinkPreviewer(container, { isEnabled, resolveMedia })
     listeners.abort();
     observer.disconnect();
     if (renderFrame !== null) cancelAnimationFrame(renderFrame);
-    nativePreviewBlocker.remove();
-    delete container.dataset.pttMediaPreviewContainer;
   }
 
   return { refresh, destroy };

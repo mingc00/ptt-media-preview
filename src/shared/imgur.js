@@ -13,30 +13,41 @@ async function get(path) {
     mode: 'cors',
     referrerPolicy: 'no-referrer',
   });
+  if (response.ok === false) throw new Error(`Imgur request failed: ${response.status}`);
   return await response.json();
 }
 
 export async function resolveAlbum(hash) {
-  try {
-    const {
-      data: { images },
-    } = await get(`album/${hash}`);
-
-    return images.map((img) => img.link);
-  } catch (e) {
-    console.error(e);
-    return [];
-  }
+  const {
+    data: { images },
+  } = await get(`album/${hash}`);
+  return images.map((img) => img.link);
 }
 
-export async function resolveUnknown(hash) {
-  try {
-    const {
-      data: { type, link },
-    } = await get(`image/${hash}`);
-    return { type, link };
-  } catch (e) {
-    console.error(e);
-    return { type: 'unknown' };
-  }
+async function fetchUnknown(hash) {
+  const {
+    data: { type, link },
+  } = await get(`image/${hash}`);
+  if (typeof type !== 'string' || typeof link !== 'string')
+    throw new Error('Invalid Imgur media response');
+  return { type, link };
+}
+
+// Shared by the isolated Term resolver service and extension previews.
+const unknownCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000;
+const CACHE_LIMIT = 100;
+
+export function resolveUnknown(hash) {
+  const cached = unknownCache.get(hash);
+  if (cached && cached.expires > Date.now()) return cached.promise;
+  const entry = { expires: Date.now() + CACHE_TTL };
+  entry.promise = fetchUnknown(hash).catch((error) => {
+    if (unknownCache.get(hash) === entry) unknownCache.delete(hash);
+    throw error;
+  });
+  unknownCache.delete(hash);
+  unknownCache.set(hash, entry);
+  if (unknownCache.size > CACHE_LIMIT) unknownCache.delete(unknownCache.keys().next().value);
+  return entry.promise;
 }

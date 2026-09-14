@@ -1,8 +1,10 @@
+import { requiresDocumentReferrer } from './media.js';
+
 export function createImageEl(sources, { classes = [], loading, onLoadFailure } = {}) {
   const [src, ...remainingSrcs] = typeof sources === 'string' ? [sources] : sources;
   const imgEl = document.createElement('img');
   imgEl.classList.add(...classes);
-  if (!src.startsWith('https://i.verb.tw/')) {
+  if (!requiresDocumentReferrer(src)) {
     imgEl.referrerPolicy = 'no-referrer';
   }
   if (loading) {

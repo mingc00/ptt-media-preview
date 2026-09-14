@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 
 const entries = {
   term: 'src/term.js',
+  'term-native': 'src/term-native.js',
   web: 'src/web.js',
 };
 
@@ -19,7 +20,7 @@ export default defineConfig(({ mode }) => {
         entry,
         fileName: () => `${mode}.js`,
         formats: ['iife'],
-        name: `PttMediaPreview${mode[0].toUpperCase()}${mode.slice(1)}`,
+        name: `PttMediaPreview${mode.replaceAll('-', '_')}`,
       },
       minify: false,
       outDir: 'dist',

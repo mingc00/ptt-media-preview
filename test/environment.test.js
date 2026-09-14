@@ -35,3 +35,34 @@ test('detects active overlay, native dialog save and screen replacement', async 
   stop();
   dom.window.close();
 });
+
+test('preview position and article mutations do not reread environment layout', async () => {
+  const dom = setup(
+    '<div id="mainContainer"></div><div id="easyReadingOverlay"><div id="easyReadingContent"></div></div>',
+  );
+  const original = globalThis.getComputedStyle;
+  let reads = 0;
+  globalThis.getComputedStyle = (...args) => {
+    reads++;
+    return original(...args);
+  };
+  const stop = observeTermEnvironment(() => {});
+  try {
+    const preview = document.createElement('img');
+    document.querySelector('#mainContainer').append(preview);
+    preview.style.left = '20px';
+    document.querySelector('#easyReadingContent').append(document.createElement('span'));
+    await settle();
+    assert.equal(reads, 1);
+    document.querySelector('#easyReadingOverlay').hidden = true;
+    await settle();
+    assert.equal(reads, 1);
+    document.querySelector('#easyReadingOverlay').hidden = false;
+    await settle();
+    assert.equal(reads, 2);
+  } finally {
+    stop();
+    globalThis.getComputedStyle = original;
+    dom.window.close();
+  }
+});

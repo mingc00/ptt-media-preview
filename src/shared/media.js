@@ -2,6 +2,15 @@ const imagePathRe = /\.(?:png|jpe?g|gif|webp)$/i;
 const imgurGifPathRe = /\.(?:gif|gifv)$/i;
 const imgurHostRe = /^(?:[mi]\.)?imgur\.com$/i;
 
+export function requiresDocumentReferrer(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === 'https:' && url.hostname === 'i.verb.tw';
+  } catch {
+    return false;
+  }
+}
+
 export function classifyMediaUrl(rawUrl) {
   let url;
   try {
@@ -73,4 +82,11 @@ export function classifyMediaUrl(rawUrl) {
   }
 
   return null;
+}
+
+export function classifyResolvedMedia(link) {
+  if (typeof link === 'string' && /^https?:\/\/i\.imgur\.com\/\w+\.mp4(?:[?#]|$)/i.test(link)) {
+    return { kind: 'imgur-gif', src: link };
+  }
+  return classifyMediaUrl(link);
 }
