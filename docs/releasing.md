@@ -33,7 +33,8 @@ No Google service account key or OAuth refresh token is stored in GitHub.
 
 ## Publishing
 
-1. Update the version with `npm version patch`, `npm version minor`, or `npm version major`.
+1. Update the version with `npm version patch`, `npm version minor`, or `npm version major`. This also
+   updates the extension manifest and pins the Surge web module URL to the new version tag.
 2. Push the version commit and tag with `git push --follow-tags`.
 3. Review the build and approve the `production` deployment.
 

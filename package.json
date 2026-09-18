@@ -9,12 +9,12 @@
     "build:package": "node --run build:content && node scripts/package.mjs",
     "check": "node --run check:format && node --run lint && node --run test && node --run build:package",
     "check:format": "oxfmt --check",
-    "postversion": "jq --arg version \"$npm_package_version\" '.version = $version' manifest.json > manifest.json.tmp && mv manifest.json.tmp manifest.json",
     "format": "oxfmt --write",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "publish:chrome": "node scripts/publish-chrome.mjs",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "version": "node scripts/update-version.mjs && git add manifest.json surge/ptt_media_preview.js"
   },
   "repository": {
     "type": "git",
