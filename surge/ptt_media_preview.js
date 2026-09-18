@@ -3,7 +3,7 @@ function modifyBody(body) {
     .replace('<head>', '<head>\n<meta name="color-scheme" content="dark">')
     .replace('</head>', function (match) {
       return (
-        `<script type="module" src="https://cdn.jsdelivr.net/gh/mingc00/ptt-media-preview@v7.1.0/src/web.js"></script>` +
+        `<script type="module" src="https://cdn.jsdelivr.net/gh/mingc00/ptt-media-preview@v7.2.0/src/web.js"></script>` +
         match
       );
     });

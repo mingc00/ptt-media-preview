@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 7.2.0 (2026-09-18)
+
+- Let the browser control lazy loading for all Easy Reading images without ptt-term's additional visibility observer, while retaining ptt-term's native hover previews
+- Fall back to the existing native Easy Reading integration when the expected ptt-term inline hook is unavailable
+
 ## 7.1.0 (2026-09-14)
 
 ### Breaking changes
