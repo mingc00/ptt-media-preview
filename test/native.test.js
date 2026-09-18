@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, settle } from './dom.js';
-import { installNativeImages, usesNativeImage } from '../src/term/native.js';
+import {
+  installNativeImages,
+  installTermIntegration,
+  usesNativeImage,
+} from '../src/term/native.js';
+import { INLINE_OWNER_ATTRIBUTE } from '../src/term/inline-ownership.js';
 import { createInlinePreviewer } from '../src/term/inline.js';
 import { createMediaLinkPreviewer } from '../src/shared/previewer.js';
 import { classifyMediaUrl } from '../src/shared/media.js';
@@ -43,6 +48,7 @@ test('supported images bypass the whitelist while preserving the enabled setting
     'https://i.imgur.com/photo.jpg',
     'https://pbs.twimg.com/media/photo?format=png',
     'https://i.meee.com.tw/photo.png',
+    'https://untrusted.example/photo.bmp',
     'https://untrusted.example/photo.jpg',
   ]) {
     assert.deepEqual(f.plugin.resolveImageUrl(href, true, []), { src: href });
@@ -178,4 +184,75 @@ test('native Imgur calls delegate to the supplied resolver without shared owners
   assert.equal(calls, 3);
   assert.equal(usesNativeImage(href), false);
   f.close();
+});
+
+test('term integration delegates inline images to the extension without changing native hover ownership', () => {
+  const dom = setup();
+  let redraws = 0;
+  const originalResolver = () => 'native-result';
+  const originalInline = () => 'native-inline';
+  const plugin = {
+    enabled: true,
+    resolveImageUrl: originalResolver,
+    _createInlinePreview: originalInline,
+    view: { redraw: () => redraws++ },
+  };
+  const app = { pluginManager: { getPlugin: () => plugin } };
+  const bridge = installTermIntegration(app);
+
+  assert.ok(bridge);
+  assert.deepEqual(plugin.resolveImageUrl('https://pbs.twimg.com/media/photo?format=jpg'), {
+    src: 'https://pbs.twimg.com/media/photo?format=jpg',
+  });
+  assert.equal(usesNativeImage('https://pbs.twimg.com/media/photo?format=jpg'), true);
+  assert.equal(plugin._createInlinePreview('https://i.imgur.com/photo.jpg'), null);
+  assert.equal(document.documentElement.hasAttribute(INLINE_OWNER_ATTRIBUTE), true);
+
+  bridge.destroy();
+  assert.equal(plugin.resolveImageUrl, originalResolver);
+  assert.equal(plugin._createInlinePreview, originalInline);
+  assert.equal(document.documentElement.hasAttribute(INLINE_OWNER_ATTRIBUTE), false);
+  assert.equal(redraws, 2);
+  dom.window.close();
+});
+
+test('term integration rolls back the native hook when inline ownership is unavailable', () => {
+  const dom = setup();
+  const originalResolver = () => 'native-result';
+  const plugin = {
+    enabled: true,
+    resolveImageUrl: originalResolver,
+    view: { redraw: () => {} },
+  };
+  const app = { pluginManager: { getPlugin: () => plugin } };
+
+  assert.equal(installTermIntegration(app), null);
+  assert.equal(plugin.resolveImageUrl, originalResolver);
+  assert.equal(document.documentElement.hasAttribute(INLINE_OWNER_ATTRIBUTE), false);
+  dom.window.close();
+});
+
+test('term integration leaves ptt-term untouched when the inline hook is not writable', () => {
+  const dom = setup();
+  let redraws = 0;
+  const originalResolver = () => 'native-result';
+  const originalInline = () => 'native-inline';
+  const plugin = {
+    enabled: true,
+    resolveImageUrl: originalResolver,
+    view: { redraw: () => redraws++ },
+  };
+  Object.defineProperty(plugin, '_createInlinePreview', {
+    configurable: true,
+    value: originalInline,
+    writable: false,
+  });
+  const app = { pluginManager: { getPlugin: () => plugin } };
+
+  assert.equal(installTermIntegration(app), null);
+  assert.equal(plugin.resolveImageUrl, originalResolver);
+  assert.equal(plugin._createInlinePreview, originalInline);
+  assert.equal(document.documentElement.hasAttribute(INLINE_OWNER_ATTRIBUTE), false);
+  assert.equal(redraws, 0);
+  dom.window.close();
 });

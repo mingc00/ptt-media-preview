@@ -1,4 +1,4 @@
-const imagePathRe = /\.(?:png|jpe?g|gif|webp)$/i;
+const imagePathRe = /\.(?:png|jpe?g|gif|webp|bmp)$/i;
 const imgurGifPathRe = /\.(?:gif|gifv)$/i;
 const imgurHostRe = /^(?:[mi]\.)?imgur\.com$/i;
 

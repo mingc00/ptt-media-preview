@@ -1,5 +1,6 @@
 import { requestUnknown } from './imgur-bridge.js';
 import { classifyMediaUrl, requiresDocumentReferrer } from '../shared/media.js';
+import { INLINE_OWNER_ATTRIBUTE } from './inline-ownership.js';
 
 export function usesNativeImage(href) {
   return classifyMediaUrl(href)?.kind === 'image' && !requiresDocumentReferrer(href);
@@ -8,7 +9,7 @@ export function usesNativeImage(href) {
 // Run in the page world: both native renderers call this plugin's resolver.
 export function installNativeImages(
   app,
-  { loadImage = probeImage, getUnknown = requestUnknown } = {},
+  { loadImage = probeImage, getUnknown = requestUnknown, redraw = true } = {},
 ) {
   const plugin = app?.pluginManager?.getPlugin?.('media_previewer');
   if (!plugin || typeof plugin.resolveImageUrl !== 'function') return null;
@@ -53,10 +54,71 @@ export function installNativeImages(
   }
 
   plugin.resolveImageUrl = resolve;
-  plugin.view?.redraw?.(true);
+  if (redraw) plugin.view?.redraw?.(true);
   return {
     destroy() {
       if (plugin.resolveImageUrl === resolve) plugin.resolveImageUrl = original;
+    },
+  };
+}
+
+export function installInlineOwnership(app, doc = document, { redraw = true } = {}) {
+  const plugin = app?.pluginManager?.getPlugin?.('media_previewer');
+  if (!plugin || typeof plugin._createInlinePreview !== 'function') return null;
+
+  const hadOwnMethod = Object.hasOwn(plugin, '_createInlinePreview');
+  const original = plugin._createInlinePreview;
+  const disableNativeInlinePreview = () => null;
+
+  try {
+    plugin._createInlinePreview = disableNativeInlinePreview;
+  } catch {
+    return null;
+  }
+  if (plugin._createInlinePreview !== disableNativeInlinePreview) return null;
+
+  doc.documentElement.setAttribute(INLINE_OWNER_ATTRIBUTE, '');
+  if (redraw) plugin.view?.redraw?.(true);
+
+  return {
+    destroy() {
+      if (plugin._createInlinePreview === disableNativeInlinePreview) {
+        if (hadOwnMethod) plugin._createInlinePreview = original;
+        else delete plugin._createInlinePreview;
+      }
+      doc.documentElement.removeAttribute(INLINE_OWNER_ATTRIBUTE);
+      if (redraw) plugin.view?.redraw?.(true);
+    },
+  };
+}
+
+export function installTermIntegration(app, options = {}) {
+  const plugin = app?.pluginManager?.getPlugin?.('media_previewer');
+  if (
+    !plugin ||
+    typeof plugin.resolveImageUrl !== 'function' ||
+    typeof plugin._createInlinePreview !== 'function'
+  ) {
+    return null;
+  }
+
+  const nativeImages = installNativeImages(app, { ...options, redraw: false });
+  if (!nativeImages) return null;
+
+  const inlineOwnership = installInlineOwnership(app, options.document ?? document, {
+    redraw: false,
+  });
+  if (!inlineOwnership) {
+    nativeImages.destroy();
+    return null;
+  }
+  plugin.view?.redraw?.(true);
+
+  return {
+    destroy() {
+      inlineOwnership.destroy();
+      nativeImages.destroy();
+      plugin.view?.redraw?.(true);
     },
   };
 }

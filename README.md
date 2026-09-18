@@ -16,11 +16,11 @@ You can install the latest version from the [Add-ons for Firefox](https://addons
 
 Term integration requires a newer ptt-term that exposes the native media plugin resolver API. Older clients are not supported. Reload open Term tabs after updating the extension to activate the integration.
 
-Single images generally use ptt-term's native hover and Easy Reading UI. The extension resolves supported links and passes the image URL to that UI. i.verb.tw remains in the extension renderer so its image requests keep the Term Referer without additional host access.
+Single images use ptt-term's native hover UI. In Easy Reading, the extension renders supported images directly with browser-native lazy loading, without ptt-term's additional visibility observer. i.verb.tw remains in the extension renderer so its image requests keep the Term Referer without additional host access.
 
 The extension handles:
 
-- Direct images and Twitter/X images through native previews.
+- Direct images and Twitter/X images through native hover previews and extension-owned Easy Reading previews.
 - Extensionless meee links by trying `.jpg`, `.png`, `.gif`, then `.jpeg` (10 seconds per candidate).
 - Extensionless Imgur links through the Imgur API; images use native previews, while albums and animations use extension previews.
 - YouTube and Twitch Clips embeds in Easy Reading.

@@ -1,4 +1,5 @@
 import { usesNativeImage } from './native.js';
+import { INLINE_OWNER_ATTRIBUTE, ownsAllInlineImages } from './inline-ownership.js';
 import { createIframeEl, createPreviewEl } from '../shared/elements.js';
 import { getTwitchEmbedUrl, getYoutubeEmbedUrl } from '../shared/embed.js';
 import { classifyMediaUrl, classifyResolvedMedia } from '../shared/media.js';
@@ -30,11 +31,15 @@ export function createInlinePreviewer(
     entry.element?.remove();
   }
 
+  function shouldHandle(anchor) {
+    return ownsAllInlineImages() || !usesNativeImage(anchor.href);
+  }
+
   function isCurrent(anchor, entry) {
     return (
       !destroyed &&
       isEnabled() &&
-      !usesNativeImage(anchor.href) &&
+      shouldHandle(anchor) &&
       content.contains(anchor) &&
       anchor.href === entry.href &&
       entries.get(anchor) === entry &&
@@ -50,10 +55,10 @@ export function createInlinePreviewer(
       } else if (media.kind === 'imgur-unknown') {
         const result = await getUnknown(media.hash);
         const resolved = classifyResolvedMedia(result.link);
-        // Single images belong to the native resolver, even while its request is pending.
         previews =
           (result.type?.startsWith('image/') || result.type?.startsWith('video/')) &&
-          resolved?.kind === 'imgur-gif'
+          resolved &&
+          (ownsAllInlineImages() || resolved.kind === 'imgur-gif')
             ? [resolved]
             : [];
       } else {
@@ -98,7 +103,7 @@ export function createInlinePreviewer(
     }
     if (!isEnabled()) return;
     for (const anchor of content.querySelectorAll('[data-type="termline"] a[href]')) {
-      if (usesNativeImage(anchor.href)) continue;
+      if (!shouldHandle(anchor)) continue;
       const existing = entries.get(anchor);
       if (existing) continue;
       const media = classifyMediaUrl(anchor.href);
@@ -128,6 +133,10 @@ export function createInlinePreviewer(
     subtree: true,
     attributes: true,
     attributeFilter: ['href'],
+  });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: [INLINE_OWNER_ATTRIBUTE],
   });
   schedule();
   return {

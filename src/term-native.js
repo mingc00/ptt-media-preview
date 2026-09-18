@@ -1,9 +1,9 @@
-import { installNativeImages } from './term/native.js';
+import { installTermIntegration } from './term/native.js';
 
 let bridge;
 function attach() {
   if (!window.app) return false;
-  bridge = installNativeImages(window.app);
+  bridge = installTermIntegration(window.app);
   return Boolean(bridge);
 }
 

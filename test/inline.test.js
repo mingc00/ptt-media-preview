@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, settle } from './dom.js';
 import { createInlinePreviewer } from '../src/term/inline.js';
+import { INLINE_OWNER_ATTRIBUTE } from '../src/term/inline-ownership.js';
 
 function row(urls, native = '') {
   return `<span type="termrow"><div><span data-type="termline">${urls.map((url) => `<a href="${url}">${url}</a>`).join('')}</span><div>${native}</div></div></span>`;
@@ -143,6 +144,52 @@ test('extensionless single images stay native while album MP4s retain extension 
   assert.equal(calls, 1);
   assert.equal(f.content.querySelectorAll('[data-ptt-inline-preview]').length, 1);
   f.close();
+});
+
+test('extension-owned inline images rely only on native lazy loading', async () => {
+  const dom = setup(
+    `<div id="easyReadingContent">${row([
+      'https://i.imgur.com/photo.jpg',
+      'https://pbs.twimg.com/media/photo?format=png&name=orig',
+      'https://untrusted.example/photo.bmp',
+    ])}</div>`,
+  );
+  document.documentElement.setAttribute(INLINE_OWNER_ATTRIBUTE, '');
+  const content = document.querySelector('#easyReadingContent');
+  const previewer = createInlinePreviewer(content, { isEnabled: () => true });
+
+  await settle();
+  const images = [...content.querySelectorAll('[data-ptt-inline-preview] img')];
+  assert.equal(images.length, 3);
+  assert.deepEqual(
+    images.map((image) => image.loading),
+    ['lazy', 'lazy', 'lazy'],
+  );
+  assert.equal(content.querySelector('.easyReadingImgContainer'), null);
+
+  previewer.destroy();
+  dom.window.close();
+});
+
+test('extension-owned inline mode renders extensionless Imgur single images', async () => {
+  const dom = setup(`<div id="easyReadingContent">${row(['https://imgur.com/unknown'])}</div>`);
+  document.documentElement.setAttribute(INLINE_OWNER_ATTRIBUTE, '');
+  const content = document.querySelector('#easyReadingContent');
+  const previewer = createInlinePreviewer(content, {
+    isEnabled: () => true,
+    getUnknown: async () => ({
+      type: 'image/png',
+      link: 'https://i.imgur.com/actual.png',
+    }),
+  });
+
+  await settle();
+  const image = content.querySelector('[data-ptt-inline-preview] img');
+  assert.equal(image.src, 'https://i.imgur.com/actual.png');
+  assert.equal(image.loading, 'lazy');
+
+  previewer.destroy();
+  dom.window.close();
 });
 
 test('temporary resolution failures retry and recover without a DOM change', async () => {
