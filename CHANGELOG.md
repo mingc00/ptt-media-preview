@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 7.2.1 (2026-09-19)
+
+- Avoid white placeholders before Easy Reading images load by removing ptt-term's image padding while preserving the existing image margins
+
 ## 7.2.0 (2026-09-18)
 
 - Let the browser control lazy loading for all Easy Reading images without ptt-term's additional visibility observer, while retaining ptt-term's native hover previews
