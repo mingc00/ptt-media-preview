@@ -9,6 +9,7 @@ const iconFiles = (await readdir('icon'))
 const files = [
   'manifest.json',
   'rules.json',
+  'term.css',
   'dist/web.js',
   'dist/term.js',
   'dist/term-native.js',

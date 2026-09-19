@@ -24,6 +24,7 @@
     },
     {
       "matches": ["https://term.ptt.cc/"],
+      "css": ["term.css"],
       "js": ["dist/term.js"]
     },
     {
